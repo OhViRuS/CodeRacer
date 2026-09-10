@@ -32,136 +32,13 @@ Users will be able to:
 * Track their results.
 * Practice different programming concepts.
 * Compare results with other users.
-* Participate in competitive races in later versions.
+* Participate in competitive races.
 
 This allows users to practice not only generic programming examples but also syntax and code structures that appear in their own projects.
 
-The application will gradually develop from a basic single-player typing application into a competitive programming practice platform.
+## Development Roadmap
 
-## Alpha Version
-
-The Alpha version will contain the core functionality required for a complete user scenario.
-
-Planned features:
-
-* Basic user interface.
-* Selection of programming language.
-* Predefined programming code snippets.
-* Typing challenge.
-* Incorrect character detection.
-* Timer.
-* Typing speed calculation.
-* Accuracy calculation.
-* Result screen.
-* Basic backend API.
-* In-memory or file-based challenge storage.
-
-Example user flow:
-
-1. User chooses a programming language.
-2. The application provides a code snippet.
-3. The user types the code.
-4. The application checks the input.
-5. When the challenge is finished, the result is calculated and displayed.
-
-Multiplayer Format
-
-Multiplayer races will use a free-for-all format with up to 5 players. All players compete individually and receive the same code snippet.
-
-Before the race starts, players wait in a lobby. Once the race begins, all players receive a synchronized countdown and start typing the same code at the same time.
-
-During the race, each player's progress is tracked and displayed in real time. The first player to correctly complete the entire code snippet wins the race. After the race, all players are ranked based on their completion time. Additional statistics such as typing speed, accuracy, and number of mistakes are also displayed.
-
-Players will also be able to create private race rooms. The room creator can share a room code or invitation link with other players and select settings such as the programming language and difficulty before starting the race.
-
-## Beta Version
-
-The Beta version will expand the application with persistent data, user-oriented functionality, and custom code challenges.
-
-Planned features:
-
-* User accounts.
-* Entity Framework and relational database.
-* Saved race history.
-* Personal statistics.
-* Programming language and topic filtering.
-* Difficulty levels.
-* Challenge management.
-* Source code file importing.
-* Validation of uploaded source code files.
-* Extraction of suitable typing snippets from imported code.
-* Ability to practice using personally imported code.
-* Leaderboards.
-* Dependency Injection.
-* Async database and file operations.
-* Custom exception handling.
-* Unit and integration tests.
-* CI pipeline.
-
-### Custom Code Import
-
-Users will be able to upload supported source code files, for example:
-
-```text
-Program.cs
-calculator.cpp
-main.py
-UserService.java
-```
-
-The backend will process the uploaded file and extract sections of code that are suitable for typing challenges.
-
-For example, an imported file may contain:
-
-```csharp
-public bool IsAdult(User user)
-{
-    return user.Age >= 18;
-}
-
-public string GetDisplayName(User user)
-{
-    return $"{user.FirstName} {user.LastName}";
-}
-```
-
-Instead of requiring the user to type the entire file, CodeRacer could extract individual functions or other suitable sections and turn them into separate challenges.
-
-```text
-Uploaded file
-     ↓
-File validation
-     ↓
-Code processing
-     ↓
-Snippet extraction
-     ↓
-Typing challenges
-```
-
-This functionality allows users to practice typing code that is relevant to their own projects and programming habits.
-
-## Final Version
-
-The Final version will focus on competitive functionality, personalization, and overall application quality.
-
-Planned features:
-
-* Multiplayer races.
-* Private race rooms.
-* Real-time race progress.
-* Server-managed race state.
-* Global rankings.
-* Advanced statistics.
-* Programming skill profiles.
-* Personalized challenge recommendations.
-* Improved custom code processing.
-* Challenges generated from user-imported code.
-* Automatic Entity Framework migrations.
-* At least 80% unit and integration test coverage.
-* CI pipeline with quality gates.
-* Application monitoring and health metrics.
-* Stable final application.
+The planned development of CodeRacer, including the Alpha, Beta, and Final versions, is described in [ROADMAP.md](ROADMAP.md).
 
 ## Technologies
 
@@ -215,5 +92,3 @@ main
 ## Current Status
 
 The project is currently in the initial setup stage.
-
-The first goal is to create a basic working connection between the React frontend and ASP.NET Core backend before implementing the CodeRacer gameplay.
