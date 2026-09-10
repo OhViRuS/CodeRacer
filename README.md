@@ -159,8 +159,7 @@ Planned technology stack:
 
 ### Frontend
 
-* React
-* JavaScript or TypeScript
+* React + JavaScript
 * HTML
 * CSS
 
