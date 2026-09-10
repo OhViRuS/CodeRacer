@@ -4,6 +4,14 @@ CodeRacer is a programming-focused typing and practice platform where users impr
 
 Unlike traditional typing games that use normal words or sentences, CodeRacer uses real programming code. Challenges can be categorized by programming language, difficulty, and programming concept. Users will also be able to import their own source code files and practice using snippets extracted from their own code.
 
+## Team Members
+
+1. Jonas Kirkilovskis (Team Leader, Backend) - *OhViRuS*
+2. Haroldas Vaitkus (Backend) - *Bobas44*
+3. Benas Lazdauskas (Backend) - *Benukage*
+4. Lukas Gudonis (Frontend) - *lycoris-mori*
+5. Kristupas Jurkus (Frontend, QA) - *JurkusKristupas*
+
 ## Problem
 
 Traditional typing applications mainly focus on ordinary text and do not help programmers practice typing programming-specific syntax such as brackets, operators, method calls, indentation, and common programming structures.
