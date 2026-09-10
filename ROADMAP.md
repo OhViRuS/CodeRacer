@@ -37,7 +37,7 @@ functionality to the requirements of each lab assignment.
 - [ ] Save typing challenge results.
 - [ ] Personal statistics and race history.
 - [ ] Difficulty and topic filtering.
-- [ ] Import source code files.
+- [ ] Import source code files with supported extensions (`.cs`, `.cpp`, `.py`, `.java`) and a maximum file size of 5 MB.
 - [ ] Validate imported files.
 - [ ] Extract suitable code snippets from imported files.
 - [ ] Generate typing challenges from a user's own code.
