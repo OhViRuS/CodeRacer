@@ -24,7 +24,7 @@ CodeRacer provides programming-specific typing challenges using both predefined 
 
 Users will be able to:
 
-* Choose a programming language.
+* Choose a programming language (e.g., C#, C++, Python, JavaScript).
 * Complete code typing challenges.
 * Import supported source code files.
 * Generate typing challenges from snippets extracted from imported code.
