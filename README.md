@@ -56,6 +56,16 @@ Example user flow:
 4. The application checks the input.
 5. When the challenge is finished, the result is calculated and displayed.
 
+Multiplayer Format
+
+Multiplayer races will use a free-for-all format with up to 5 players. All players compete individually and receive the same code snippet.
+
+Before the race starts, players wait in a lobby. Once the race begins, all players receive a synchronized countdown and start typing the same code at the same time.
+
+During the race, each player's progress is tracked and displayed in real time. The first player to correctly complete the entire code snippet wins the race. After the race, all players are ranked based on their completion time. Additional statistics such as typing speed, accuracy, and number of mistakes are also displayed.
+
+Players will also be able to create private race rooms. The room creator can share a room code or invitation link with other players and select settings such as the programming language and difficulty before starting the race.
+
 ## Beta Version
 
 The Beta version will expand the application with persistent data, user-oriented functionality, and custom code challenges.
