@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="coderacer.client/coderacer.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="CodeRacer.Server/CodeRacer.Server.csproj" />
+</Solution>
