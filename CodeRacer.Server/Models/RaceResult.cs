@@ -8,7 +8,7 @@ namespace CodeRacer.Server.Models
         {
             if (other == null) return 1;
 
-            return this.TypingSpeed.CompareTo(other.TypingSpeed);
+            return other.TypingSpeed.CompareTo(this.TypingSpeed);
         }
     }
 }
