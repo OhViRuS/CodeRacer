@@ -50,6 +50,11 @@ public class RaceSession
 
     public RaceResult GetResult()
     {
+        if (!IsCompleted)
+        {
+            throw new InvalidOperationException("Race is not completed yet.");
+        }
+
         TimeSpan time = _stopwatch.Elapsed;
 
         double wpm;
