@@ -83,7 +83,7 @@ function App() {
 
     return (
         <div className="center-container">
-            <h1 className="brand">Coderacers</h1>
+            <h1 className="brand">Coderacer</h1>
 
             {lobby ? (
                 <div className="lobby-card">
