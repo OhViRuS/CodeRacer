@@ -7,6 +7,7 @@ public class RaceSession
 {
     private readonly Stopwatch _stopwatch = new();
     private readonly List<CharacterMistake> _mistakes = new();
+    private int _totalErrorsCount = 0;
 
     public RaceSession(CodeSnippet snippet)
     {
@@ -39,12 +40,17 @@ public class RaceSession
             return true;
         }
 
-        _mistakes.Add(new CharacterMistake
+        _totalErrorsCount++;
+
+        if (_mistakes.Count < 500)
         {
-            PositionIndex = CurrentPosition,
-            ExpectedCharacter = expected,
-            TypedCharacter = typed
-        });
+            _mistakes.Add(new CharacterMistake
+            {
+                PositionIndex = CurrentPosition,
+                ExpectedCharacter = expected,
+                TypedCharacter = typed
+            });
+        }
         return false;
     }
 
@@ -70,7 +76,7 @@ public class RaceSession
         double accuracy;
         if (TotalKeystrokes > 0)
         {
-            accuracy = (double)(TotalKeystrokes - _mistakes.Count) / TotalKeystrokes * 100;
+            accuracy = (double)(TotalKeystrokes - _totalErrorsCount) / TotalKeystrokes * 100;
         }
         else
         {
