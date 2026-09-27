@@ -69,6 +69,11 @@ public class CodeSnippetsController : ControllerBase
     [HttpPut("{id:guid}")]
     public IActionResult Update(Guid id, CodeSnippet updatedSnippet)
     {
+        if (id != updatedSnippet.Id)
+        {
+            return BadRequest("Route id does not match snippet id.");
+        }
+
         var snippet = Snippets.FirstOrDefault(s => s.Id == id);
 
         if (snippet == null)
