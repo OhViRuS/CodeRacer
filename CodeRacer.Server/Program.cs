@@ -15,6 +15,11 @@ app.MapStaticAssets();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "CodeRacer API v1");
+    });
 }
 
 app.UseHttpsRedirection();
