@@ -1,5 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using CodeRacer.Server.Models;
+using CodeRacer.Server.Interfaces;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace CodeRacer.Server.Controllers;
 
@@ -7,40 +11,28 @@ namespace CodeRacer.Server.Controllers;
 [Route("api/[controller]")]
 public class CodeSnippetsController : ControllerBase
 {
-    // Temporary in-memory storage until database integration is added.
-    private static readonly List<CodeSnippet> Snippets = new()
-    {
-        new CodeSnippet
-        {
-            Id = Guid.NewGuid(),
-            CodeText = "Console.WriteLine(\"Hello World\");",
-            Language = ProgrammingLanguage.CSharp,
-            Difficulty = Difficulty.Easy,
-            ProgrammingConcept = "Output"
-        },
+    private readonly ICodeSnippetProvider _snippetProvider;
+    private static List<CodeSnippet> _snippets = new();
 
-        new CodeSnippet
-        {
-            Id = Guid.NewGuid(),
-            CodeText = "console.log('Hello World');",
-            Language = ProgrammingLanguage.JavaScript,
-            Difficulty = Difficulty.Hard,
-            ProgrammingConcept = "Output"
-        }
-    };
+    public CodeSnippetsController(ICodeSnippetProvider snippetProvider)
+    {
+        _snippetProvider = snippetProvider;
+
+        _snippets = _snippetProvider.GetSnippets();
+    }
 
     // GET: /api/codesnippets
     [HttpGet]
     public ActionResult<IEnumerable<CodeSnippet>> GetAll()
     {
-        return Ok(Snippets);
+        return Ok(_snippets);
     }
 
     // GET: /api/codesnippets/{id}
     [HttpGet("{id:guid}")]
     public ActionResult<CodeSnippet> GetById(Guid id)
     {
-        var snippet = Snippets.FirstOrDefault(s => s.Id == id);
+        var snippet = _snippets.FirstOrDefault(s => s.Id == id);
 
         if (snippet == null)
         {
@@ -56,7 +48,7 @@ public class CodeSnippetsController : ControllerBase
     {
         snippet.Id = Guid.NewGuid();
 
-        Snippets.Add(snippet);
+        _snippets.Add(snippet);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -74,7 +66,7 @@ public class CodeSnippetsController : ControllerBase
             return BadRequest("Route id does not match snippet id.");
         }
 
-        var snippet = Snippets.FirstOrDefault(s => s.Id == id);
+        var snippet = _snippets.FirstOrDefault(s => s.Id == id);
 
         if (snippet == null)
         {
@@ -93,14 +85,14 @@ public class CodeSnippetsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public IActionResult Delete(Guid id)
     {
-        var snippet = Snippets.FirstOrDefault(s => s.Id == id);
+        var snippet = _snippets.FirstOrDefault(s => s.Id == id);
 
         if (snippet == null)
         {
             return NotFound();
         }
 
-        Snippets.Remove(snippet);
+        _snippets.Remove(snippet);
 
         return NoContent();
     }

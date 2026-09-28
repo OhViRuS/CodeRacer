@@ -1,0 +1,14 @@
+[
+  {
+    "CodeText": "Console.WriteLine(\"Hello World\");",
+    "Language": 0,
+    "Difficulty": 0,
+    "ProgrammingConcept": "Output"
+  },
+  {
+    "CodeText": "console.log('Hello World');",
+    "Language": 3,
+    "Difficulty": 2,
+    "ProgrammingConcept": "Output"
+  }
+]
