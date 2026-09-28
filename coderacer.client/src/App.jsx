@@ -1,5 +1,6 @@
 ﻿import './App.css';
 import { useState } from 'react';
+import CodeSnippetDisplay from './components/CodeSnippetDisplay';
 
 function App() {
     const [lobby, setLobby] = useState(() => {
@@ -96,6 +97,9 @@ function App() {
                             <li key={i}>{p}</li>
                         ))}
                     </ul>
+
+                    <CodeSnippetDisplay />
+
                     <div style={{marginTop: 12}}>
                         <button className="secondary-btn" style={{...sharedBtnStyle, marginLeft:8}} onClick={handleClearLobby}>Close Lobby</button>
                     </div>
