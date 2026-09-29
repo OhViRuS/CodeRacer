@@ -18,7 +18,10 @@ public class CodeSnippetsController : ControllerBase
     {
         _snippetProvider = snippetProvider;
 
-        _snippets = _snippetProvider.GetSnippets();
+        if (_snippets == null || !_snippets.Any())
+        {
+            _snippets = _snippetProvider.GetSnippets();
+        }
     }
 
     // GET: /api/codesnippets
