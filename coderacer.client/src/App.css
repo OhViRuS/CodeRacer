@@ -39,7 +39,7 @@ th, td {
 /* Lobby card: rectangular panel centered on the page */
 .lobby-card {
     width: 420px;
-    background: #fff;
+    background: #f3f6ff;
     border: 1px solid #e6e7eb;
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(9, 30, 66, 0.08);
@@ -48,8 +48,10 @@ th, td {
 }
 
 .lobby-card h2 {
-    margin: 0 0 8px 0;
-    font-size: 20px;
+    margin: 0 0 12px 0;
+    font-size: 32px;
+    font-weight: 700;
+    color: #222;
 }
 
 .lobby-card p { margin: 6px 0; color: #222; }
@@ -60,7 +62,9 @@ th, td {
 }
 
 .lobby-card li {
-    margin: 4px 0;
+    margin: 8px 0;
+    color: #3b2f4a;
+    font-weight: 500;
 }
 
 .secondary-btn {
@@ -73,3 +77,22 @@ th, td {
 }
 
 .secondary-btn:hover { background: #e5e7eb; }
+
+.lobby-card pre {
+    background: #3b2f4a;
+    color: #f9fafb;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+.code-snippet-section {
+    border-top: 2px solid #d1d5db;
+    margin-top: 20px;
+    padding-top: 20px;
+}
+
+.snippet-title {
+    font-size: 28px;
+}
