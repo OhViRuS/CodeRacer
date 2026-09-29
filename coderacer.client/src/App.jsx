@@ -1,5 +1,5 @@
 ﻿import './App.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import CodeSnippetDisplay from './components/CodeSnippetDisplay';
 
 function App() {
@@ -12,6 +12,35 @@ function App() {
             return null;
         }
     });
+
+    const [languages, setLanguages] = useState([]);
+    const [selectedLanguage, setSelectedLanguage] = useState(() => {
+        try {
+            return localStorage.getItem('language');
+        } catch (e) {
+            console.error('Failed to load language from localStorage', e);
+            return null;
+        }
+    });
+
+    useEffect(() => {
+        fetch('/api/codesnippets/languages')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to load languages');
+                return response.json();
+            })
+            .then(setLanguages)
+            .catch(e => console.error(e));
+    }, []);
+
+    function handleLanguageChange(name) {
+        setSelectedLanguage(name);
+        try {
+            localStorage.setItem('language', name);
+        } catch (e) {
+            console.error('Failed to save language to localStorage', e);
+        }
+    }
 
     const sharedBtnStyle = { fontFamily: 'inherit', fontSize: 16, padding: '8px 12px' };
 
@@ -98,16 +127,32 @@ function App() {
                         ))}
                     </ul>
 
-                    <CodeSnippetDisplay />
+                    <h3>Select a programming language</h3>
+                    <div>
+                        {languages.map(l => (
+                            <button
+                                key={l.name}
+                                className={selectedLanguage === l.name ? 'primary-btn' : 'secondary-btn'}
+                                style={{ ...sharedBtnStyle, marginRight: 8 }}
+                                onClick={() => handleLanguageChange(l.name)}
+                            >
+                                {l.displayName}
+                            </button>
+                        ))}
+                    </div>
 
-                    <div style={{marginTop: 12}}>
-                        <button className="secondary-btn" style={{...sharedBtnStyle, marginLeft:8}} onClick={handleClearLobby}>Close Lobby</button>
+                    {selectedLanguage
+                        ? <CodeSnippetDisplay language={selectedLanguage} />
+                        : <p>Pick a language to get a code snippet.</p>}
+
+                    <div style={{ marginTop: 12 }}>
+                        <button className="secondary-btn" style={{ ...sharedBtnStyle, marginLeft: 8 }} onClick={handleClearLobby}>Close Lobby</button>
                     </div>
                 </div>
             ) : (
                 <div>
                     <button className="primary-btn" style={sharedBtnStyle} onClick={handleCreateLobby}>Create Lobby</button>
-                    <button className="secondary-btn" style={{...sharedBtnStyle, marginLeft:8}} onClick={handleJoinLobby}>Join Lobby</button>
+                    <button className="secondary-btn" style={{ ...sharedBtnStyle, marginLeft: 8 }} onClick={handleJoinLobby}>Join Lobby</button>
                 </div>
             )}
         </div>

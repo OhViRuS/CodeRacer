@@ -26,14 +26,47 @@ public class CodeSnippetsController : ControllerBase
             Language = ProgrammingLanguage.JavaScript,
             Difficulty = Difficulty.Hard,
             ProgrammingConcept = "Output"
+        },
+
+        new CodeSnippet
+        {
+            Id = Guid.NewGuid(),
+            CodeText = "print(\"Hello World\")",
+            Language = ProgrammingLanguage.Python,
+            Difficulty = Difficulty.Easy,
+            ProgrammingConcept = "Output"
+        },
+
+        new CodeSnippet
+        {
+            Id = Guid.NewGuid(),
+            CodeText = "std::cout << \"Hello World\" << std::endl;",
+            Language = ProgrammingLanguage.Cpp,
+            Difficulty = Difficulty.Easy,
+            ProgrammingConcept = "Output"
         }
     };
 
     // GET: /api/codesnippets
+    // GET: /api/codesnippets?language=Python
     [HttpGet]
-    public ActionResult<IEnumerable<CodeSnippet>> GetAll()
+    public ActionResult<IEnumerable<CodeSnippet>> GetAll([FromQuery] ProgrammingLanguage? language)
     {
-        return Ok(Snippets);
+        IEnumerable<CodeSnippet> result = language is null
+            ? Snippets
+            : Snippets.Where(s => s.Language == language);
+
+        return Ok(result);
+    }
+
+    // GET: /api/codesnippets/languages
+    [HttpGet("languages")]
+    public ActionResult<IEnumerable<LanguageOption>> GetLanguages()
+    {
+        var languages = Enum.GetValues<ProgrammingLanguage>()
+            .Select(l => new LanguageOption(l.ToString(), l.ToDisplayName()));
+
+        return Ok(languages);
     }
 
     // GET: /api/codesnippets/{id}
@@ -104,4 +137,18 @@ public class CodeSnippetsController : ControllerBase
 
         return NoContent();
     }
+}
+
+public record LanguageOption(string Name, string DisplayName);
+
+public static class ProgrammingLanguageExtensions
+{
+    public static string ToDisplayName(this ProgrammingLanguage language) => language switch
+    {
+        ProgrammingLanguage.CSharp => "C#",
+        ProgrammingLanguage.Cpp => "C++",
+        ProgrammingLanguage.Python => "Python",
+        ProgrammingLanguage.JavaScript => "JavaScript",
+        _ => language.ToString()
+    };
 }

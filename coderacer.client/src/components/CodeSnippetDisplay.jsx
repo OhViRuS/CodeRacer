@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-function fetchCodeSnippet() {
-    return fetch('/api/codesnippets')
+function fetchCodeSnippet(language) {
+    return fetch(`/api/codesnippets?language=${encodeURIComponent(language)}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Failed to load code snippet');
@@ -15,17 +15,18 @@ function fetchCodeSnippet() {
             }
 
             if (data.length === 0) {
-                throw new Error('No code snippets available');
+                throw new Error('No code snippets available for this language');
             }
 
             return data[0];
         });
 }
 
-function CodeSnippetDisplay() {
+function CodeSnippetDisplay({ language }) {
     const [snippet, setSnippet] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [retryCount, setRetryCount] = useState(0);
 
     function getDifficultyName(difficulty) {
         switch (difficulty) {
@@ -41,33 +42,30 @@ function CodeSnippetDisplay() {
     }
 
     useEffect(() => {
-        fetchCodeSnippet()
-            .then(data => {
-                setSnippet(data);
-            })
-            .catch(error => {
-                setError(error.message);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-    }, []);
+        let cancelled = false; // ignore stale responses if the language changes quickly
 
-    function handleRetry() {
         setLoading(true);
         setError(null);
         setSnippet(null);
 
-        fetchCodeSnippet()
+        fetchCodeSnippet(language)
             .then(data => {
-                setSnippet(data);
+                if (!cancelled) setSnippet(data);
             })
-            .catch(error => {
-                setError(error.message);
+            .catch(e => {
+                if (!cancelled) setError(e.message);
             })
             .finally(() => {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [language, retryCount]);
+
+    function handleRetry() {
+        setRetryCount(count => count + 1);
     }
 
     if (loading) {
