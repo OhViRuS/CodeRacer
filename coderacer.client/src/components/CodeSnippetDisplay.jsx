@@ -10,6 +10,10 @@ function fetchCodeSnippet() {
             return response.json();
         })
         .then(data => {
+            if (!Array.isArray(data)) {
+                throw new Error('Invalid code snippet response');
+            }
+
             if (data.length === 0) {
                 throw new Error('No code snippets available');
             }
