@@ -1,5 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using CodeRacer.Server.Models;
+using CodeRacer.Server.Interfaces;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace CodeRacer.Server.Controllers;
 
@@ -7,56 +11,32 @@ namespace CodeRacer.Server.Controllers;
 [Route("api/[controller]")]
 public class CodeSnippetsController : ControllerBase
 {
-    // Temporary in-memory storage until database integration is added.
-    private static readonly List<CodeSnippet> Snippets = new()
-    {
-        new CodeSnippet
-        {
-            Id = Guid.NewGuid(),
-            CodeText = "Console.WriteLine(\"Hello World\");",
-            Language = ProgrammingLanguage.CSharp,
-            Difficulty = Difficulty.Easy,
-            ProgrammingConcept = "Output"
-        },
-
-        new CodeSnippet
-        {
-            Id = Guid.NewGuid(),
-            CodeText = "console.log('Hello World');",
-            Language = ProgrammingLanguage.JavaScript,
-            Difficulty = Difficulty.Hard,
-            ProgrammingConcept = "Output"
-        }
-    };
 
     // GET: /api/codesnippets
     [HttpGet]
-    public ActionResult<IEnumerable<CodeSnippet>> GetAll()
+    public ActionResult<IEnumerable<CodeSnippet>> GetAll([FromServices] ICodeSnippetProvider snippetProvider)
     {
-        return Ok(Snippets);
+        var snippets = snippetProvider.GetSnippets();
+        return Ok(snippets);
     }
 
     // GET: /api/codesnippets/{id}
     [HttpGet("{id:guid}")]
-    public ActionResult<CodeSnippet> GetById(Guid id)
+    public ActionResult<CodeSnippet> GetById(Guid id, [FromServices] ICodeSnippetProvider snippetProvider)
     {
-        var snippet = Snippets.FirstOrDefault(s => s.Id == id);
-
-        if (snippet == null)
-        {
-            return NotFound();
-        }
-
+        var snippet = snippetProvider.GetSnippets().FirstOrDefault(s => s.Id == id);
+        if (snippet == null) return NotFound();
         return Ok(snippet);
     }
 
     // POST: /api/codesnippets
     [HttpPost]
-    public ActionResult<CodeSnippet> Create(CodeSnippet snippet)
+    public ActionResult<CodeSnippet> Create([FromBody] CodeSnippet snippet, [FromServices] ICodeSnippetProvider snippetProvider)
     {
-        snippet.Id = Guid.NewGuid();
+        if (snippet == null) return BadRequest();
 
-        Snippets.Add(snippet);
+        snippet.Id = snippet.Id == Guid.Empty ? Guid.NewGuid() : snippet.Id;
+        snippetProvider.AddSnippet(snippet);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -67,41 +47,22 @@ public class CodeSnippetsController : ControllerBase
 
     // PUT: /api/codesnippets/{id}
     [HttpPut("{id:guid}")]
-    public IActionResult Update(Guid id, CodeSnippet updatedSnippet)
+    public IActionResult Update(Guid id, [FromBody] CodeSnippet updatedSnippet, [FromServices] ICodeSnippetProvider snippetProvider)
     {
-        if (id != updatedSnippet.Id)
-        {
-            return BadRequest("Route id does not match snippet id.");
-        }
+        if (updatedSnippet == null) return BadRequest();
+        if (id != updatedSnippet.Id) return BadRequest("Route id does not match snippet id.");
 
-        var snippet = Snippets.FirstOrDefault(s => s.Id == id);
-
-        if (snippet == null)
-        {
-            return NotFound();
-        }
-
-        snippet.CodeText = updatedSnippet.CodeText;
-        snippet.Language = updatedSnippet.Language;
-        snippet.Difficulty = updatedSnippet.Difficulty;
-        snippet.ProgrammingConcept = updatedSnippet.ProgrammingConcept;
-
+        var updated = snippetProvider.UpdateSnippet(id, updatedSnippet);
+        if (!updated) return NotFound();
         return NoContent();
     }
 
     // DELETE: /api/codesnippets/{id}
     [HttpDelete("{id:guid}")]
-    public IActionResult Delete(Guid id)
+    public IActionResult Delete(Guid id, [FromServices] ICodeSnippetProvider snippetProvider)
     {
-        var snippet = Snippets.FirstOrDefault(s => s.Id == id);
-
-        if (snippet == null)
-        {
-            return NotFound();
-        }
-
-        Snippets.Remove(snippet);
-
+        var removed = snippetProvider.DeleteSnippet(id);
+        if (!removed) return NotFound();
         return NoContent();
     }
 }

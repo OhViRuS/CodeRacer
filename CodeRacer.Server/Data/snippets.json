@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "e8b7d1a2-3f4c-4a1b-8f2c-0d1e2f3a4b5c",
+    "CodeText": "Console.WriteLine(\"Hello World\");",
+    "Language": 0,
+    "Difficulty": 0,
+    "ProgrammingConcept": "Output"
+  },
+  {
+    "Id": "a1b2c3d4-5e6f-4710-9abc-def012345678",
+    "CodeText": "console.log('Hello World');",
+    "Language": 3,
+    "Difficulty": 2,
+    "ProgrammingConcept": "Output"
+  }
+]
