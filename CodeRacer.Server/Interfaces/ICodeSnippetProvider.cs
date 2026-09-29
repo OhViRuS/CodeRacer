@@ -6,4 +6,10 @@ namespace CodeRacer.Server.Interfaces;
 public interface ICodeSnippetProvider
 {
     List<CodeSnippet> GetSnippets(string filePath = "Data/snippets.json");
+
+    void AddSnippet(CodeSnippet snippet);
+
+    bool UpdateSnippet(Guid id, CodeSnippet updatedSnippet);
+
+    bool DeleteSnippet(Guid id);
 }

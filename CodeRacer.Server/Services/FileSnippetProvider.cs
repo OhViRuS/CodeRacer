@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using CodeRacer.Server.Models;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Extensions;
+using System.Linq;
 
 namespace CodeRacer.Server.Services;
 
@@ -12,6 +13,7 @@ public class FileSnippetProvider : ICodeSnippetProvider
 {
     private readonly object _loadLock = new();
     private List<CodeSnippet>? _cachedSnippets;
+    private readonly object _modifyLock = new();
 
     public List<CodeSnippet> GetSnippets(string filePath = "Data/snippets.json")
     {
@@ -29,8 +31,7 @@ public class FileSnippetProvider : ICodeSnippetProvider
 
             if (!File.Exists(filePath))
             {
-                _cachedSnippets = new List<CodeSnippet>();
-                return new List<CodeSnippet>(_cachedSnippets);
+                throw new FileNotFoundException($"The snippets data file was not found at '{filePath}'. Please ensure snippets.json exists and is copied to the output directory.");
             }
 
             string jsonText;
@@ -57,6 +58,56 @@ public class FileSnippetProvider : ICodeSnippetProvider
             _cachedSnippets = snippets;
 
             return new List<CodeSnippet>(_cachedSnippets);
+        }
+    }
+
+    public void AddSnippet(CodeSnippet snippet)
+    {
+        if (snippet == null) throw new ArgumentNullException(nameof(snippet));
+
+        lock (_modifyLock)
+        {
+            var current = GetSnippets();
+
+            if (snippet.Id == Guid.Empty)
+            {
+                snippet.Id = Guid.NewGuid();
+            }
+
+            snippet.CodeText = snippet.CodeText.NormalizeSnippet();
+
+            _cachedSnippets!.Add(snippet);
+        }
+    }
+
+    public bool UpdateSnippet(Guid id, CodeSnippet updatedSnippet)
+    {
+        if (updatedSnippet == null) throw new ArgumentNullException(nameof(updatedSnippet));
+
+        lock (_modifyLock)
+        {
+            GetSnippets();
+            var existing = _cachedSnippets!.FirstOrDefault(s => s.Id == id);
+            if (existing == null) return false;
+
+            existing.CodeText = updatedSnippet.CodeText.NormalizeSnippet();
+            existing.Language = updatedSnippet.Language;
+            existing.Difficulty = updatedSnippet.Difficulty;
+            existing.ProgrammingConcept = updatedSnippet.ProgrammingConcept;
+
+            return true;
+        }
+    }
+
+    public bool DeleteSnippet(Guid id)
+    {
+        lock (_modifyLock)
+        {
+            GetSnippets();
+            var existing = _cachedSnippets!.FirstOrDefault(s => s.Id == id);
+            if (existing == null) return false;
+
+            return _cachedSnippets!.Remove(existing);
         }
     }
 }
