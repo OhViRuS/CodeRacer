@@ -43,13 +43,14 @@ public class FileSnippetProvider : ICodeSnippetProvider
 
             var snippets = JsonSerializer.Deserialize<List<CodeSnippet>>(jsonText) ?? new List<CodeSnippet>();
 
+            var missing = snippets.Where(s => s.Id == Guid.Empty).ToList();
+            if (missing.Any())
+            {
+                throw new InvalidOperationException($"Data/snippets.json contains {missing.Count} snippet(s) without an Id. Add explicit Ids to the JSON or enable a migration.");
+            }
+
             foreach (var snippet in snippets)
             {
-                if (snippet.Id == Guid.Empty)
-                {
-                    snippet.Id = Guid.NewGuid();
-                }
-
                 snippet.CodeText = snippet.CodeText.NormalizeSnippet();
             }
 

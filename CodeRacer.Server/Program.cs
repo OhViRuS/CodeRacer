@@ -13,6 +13,12 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var provider = scope.ServiceProvider.GetRequiredService<CodeRacer.Server.Interfaces.ICodeSnippetProvider>();
+    provider.GetSnippets();
+}
+
 app.UseDefaultFiles();
 app.MapStaticAssets();
 
