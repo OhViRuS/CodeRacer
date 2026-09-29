@@ -6,10 +6,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+builder.Services.AddSingleton<CodeRacer.Server.Interfaces.ICodeSnippetProvider, CodeRacer.Server.Services.FileSnippetProvider>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
-builder.Services.AddScoped<ICodeSnippetProvider, FileSnippetProvider>();
 
 var app = builder.Build();
 
