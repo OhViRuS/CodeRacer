@@ -65,6 +65,10 @@ function TypingChallenge({ language }) {
         ? 100
         : Math.round(((totalKeystrokes - mistakes) / totalKeystrokes) * 100);
 
+    const wpm = elapsedTime > 0
+        ? Math.round((typedText.length / 5) / (elapsedTime / 60))
+        : 0;
+
     if (error) {
         return <p>{error}</p>;
     }
@@ -128,6 +132,10 @@ function TypingChallenge({ language }) {
 
             <p>
                 Accuracy: {accuracy}%
+            </p>
+
+            <p>
+                WPM: {wpm}
             </p>
 
             <p>
