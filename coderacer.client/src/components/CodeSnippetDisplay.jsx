@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 // Enum names from the API -> labels shown on the buttons
-const LANGUAGE_LABELS = { CSharp: 'C#', Cpp: 'C++' };
+const LANGUAGE_LABELS = { CSharp: 'C#', Cpp: 'C++', Python: 'Python', JavaScript: 'JavaScript' };
 
 function fetchLanguages() {
     return fetch('/api/codesnippets/languages')
