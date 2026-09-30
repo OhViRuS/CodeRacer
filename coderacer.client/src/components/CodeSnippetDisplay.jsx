@@ -42,7 +42,7 @@ function fetchCodeSnippet(language) {
         });
 }
 
-function CodeSnippetDisplay() {
+function CodeSnippetDisplay({ onLanguageSelected }) {
     const [languages, setLanguages] = useState([]);
     const [languagesError, setLanguagesError] = useState(null);
     const [selectedLanguage, setSelectedLanguage] = useState(() => {
@@ -84,7 +84,9 @@ function CodeSnippetDisplay() {
         }
 
         startLoading();
+        // Notify the parent component about the selected language
         setSelectedLanguage(name);
+        onLanguageSelected?.(name);
 
         try {
             localStorage.setItem('language', name);
