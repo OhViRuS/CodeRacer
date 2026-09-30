@@ -27,6 +27,7 @@ function TypingChallenge({ language }) {
     const [typedText, setTypedText] = useState('');
     const [error, setError] = useState(null);
     const [mistakes, setMistakes] = useState(0);
+    const [totalKeystrokes, setTotalKeystrokes] = useState(0);
 
     useEffect(() => {
         fetchCodeSnippet(language)
@@ -46,6 +47,10 @@ function TypingChallenge({ language }) {
         ? typedText === snippet.codeText
         : false;
 
+    const accuracy = totalKeystrokes === 0
+        ? 100
+        : Math.round(((totalKeystrokes - mistakes) / totalKeystrokes) * 100);
+
     if (error) {
         return <p>{error}</p>;
     }
@@ -58,6 +63,8 @@ function TypingChallenge({ language }) {
         const newText = event.target.value;
 
         if (newText.length > typedText.length) {
+            setTotalKeystrokes(count => count + 1);
+
             const typedIndex = newText.length - 1;
             const typedCharacter = newText[typedIndex];
             const expectedCharacter = snippet.codeText[typedIndex];
@@ -90,6 +97,10 @@ function TypingChallenge({ language }) {
 
             <p>
                 Mistakes: {mistakes}
+            </p>
+
+            <p>
+                Accuracy: {accuracy}%
             </p>
 
             {!isCorrectSoFar && (
