@@ -29,7 +29,7 @@ function TypingChallenge({ language }) {
     const [mistakes, setMistakes] = useState(0);
     const [totalKeystrokes, setTotalKeystrokes] = useState(0);
     const [startTime, setStartTime] = useState(null);
-    const [completionTime, setCompletionTime] = useState(null);
+    const [elapsedTime, setElapsedTime] = useState(0);
 
     useEffect(() => {
         fetchCodeSnippet(language)
@@ -48,6 +48,18 @@ function TypingChallenge({ language }) {
     const isCompleted = snippet
         ? typedText === snippet.codeText
         : false;
+
+    useEffect(() => {
+        if (startTime === null || isCompleted) {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            setElapsedTime((Date.now() - startTime) / 1000);
+        }, 100);
+
+        return () => clearInterval(interval);
+    }, [startTime, isCompleted]);
 
     const accuracy = totalKeystrokes === 0
         ? 100
@@ -85,7 +97,8 @@ function TypingChallenge({ language }) {
 
         if (newText === snippet.codeText && currentStartTime !== null) {
             const elapsedSeconds = (Date.now() - currentStartTime) / 1000;
-            setCompletionTime(elapsedSeconds);
+
+            setElapsedTime(elapsedSeconds);
         }
 
         setTypedText(newText);
@@ -117,11 +130,9 @@ function TypingChallenge({ language }) {
                 Accuracy: {accuracy}%
             </p>
 
-            {completionTime !== null && (
-                <p>
-                    Time: {completionTime.toFixed(2)} seconds
-                </p>
-            )}
+            <p>
+                Time: {elapsedTime.toFixed(1)} seconds
+            </p>
 
             {!isCorrectSoFar && (
                 <p>Incorrect character!</p>
