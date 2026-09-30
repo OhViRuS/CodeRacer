@@ -12,5 +12,19 @@
     "Language": 3,
     "Difficulty": 2,
     "ProgrammingConcept": "Output"
+  },
+  {
+    "Id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "CodeText": "print(\"Hello World\")",
+    "Language": 2,
+    "Difficulty": 0,
+    "ProgrammingConcept": "Output"
+  },
+  {
+    "Id": "3b241101-e2bb-4255-8caf-4136c566a962",
+    "CodeText": "std::cout << \"Hello World\" << std::endl;",
+    "Language": 1,
+    "Difficulty": 0,
+    "ProgrammingConcept": "Output"
   }
 ]
