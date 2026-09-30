@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 
 // Enum names from the API -> labels shown on the buttons
 const LANGUAGE_LABELS = { CSharp: 'C#', Cpp: 'C++', Python: 'Python', JavaScript: 'JavaScript' };
-
 function fetchLanguages() {
     return fetch('/api/codesnippets/languages')
         .then(response => {
@@ -11,6 +10,13 @@ function fetchLanguages() {
             }
 
             return response.json();
+        })
+        .then(data => {
+            if (!Array.isArray(data)) {
+                throw new Error('Invalid languages response');
+            }
+
+            return data;
         });
 }
 
@@ -50,7 +56,7 @@ function CodeSnippetDisplay() {
 
     const [snippet, setSnippet] = useState(null);
     const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(selectedLanguage !== null);
     const [retryCount, setRetryCount] = useState(0);
 
     function getDifficultyName(difficulty) {
@@ -66,7 +72,18 @@ function CodeSnippetDisplay() {
         }
     }
 
+    function startLoading() {
+        setLoading(true);
+        setError(null);
+        setSnippet(null);
+    }
+
     function handleLanguageChange(name) {
+        if (name === selectedLanguage) {
+            return; // same language: the effect won't re-run, so loading would get stuck
+        }
+
+        startLoading();
         setSelectedLanguage(name);
 
         try {
@@ -77,6 +94,7 @@ function CodeSnippetDisplay() {
     }
 
     function handleRetry() {
+        startLoading();
         setRetryCount(count => count + 1);
     }
 
@@ -94,10 +112,6 @@ function CodeSnippetDisplay() {
         }
 
         let cancelled = false; // ignore stale responses if the language changes quickly
-
-        setLoading(true);
-        setError(null);
-        setSnippet(null);
 
         fetchCodeSnippet(selectedLanguage)
             .then(data => {
