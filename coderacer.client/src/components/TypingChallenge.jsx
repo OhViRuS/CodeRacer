@@ -28,6 +28,8 @@ function TypingChallenge({ language }) {
     const [error, setError] = useState(null);
     const [mistakes, setMistakes] = useState(0);
     const [totalKeystrokes, setTotalKeystrokes] = useState(0);
+    const [startTime, setStartTime] = useState(null);
+    const [completionTime, setCompletionTime] = useState(null);
 
     useEffect(() => {
         fetchCodeSnippet(language)
@@ -62,6 +64,13 @@ function TypingChallenge({ language }) {
     function handleTyping(event) {
         const newText = event.target.value;
 
+        let currentStartTime = startTime;
+
+        if (startTime === null && newText.length > 0) {
+            currentStartTime = Date.now();
+            setStartTime(currentStartTime);
+        }
+
         if (newText.length > typedText.length) {
             setTotalKeystrokes(count => count + 1);
 
@@ -72,6 +81,11 @@ function TypingChallenge({ language }) {
             if (typedCharacter !== expectedCharacter) {
                 setMistakes(count => count + 1);
             }
+        }
+
+        if (newText === snippet.codeText && currentStartTime !== null) {
+            const elapsedSeconds = (Date.now() - currentStartTime) / 1000;
+            setCompletionTime(elapsedSeconds);
         }
 
         setTypedText(newText);
@@ -102,6 +116,12 @@ function TypingChallenge({ language }) {
             <p>
                 Accuracy: {accuracy}%
             </p>
+
+            {completionTime !== null && (
+                <p>
+                    Time: {completionTime.toFixed(2)} seconds
+                </p>
+            )}
 
             {!isCorrectSoFar && (
                 <p>Incorrect character!</p>
