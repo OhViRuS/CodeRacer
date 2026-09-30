@@ -13,11 +13,27 @@ public class CodeSnippetsController : ControllerBase
 {
 
     // GET: /api/codesnippets
+    // GET: /api/codesnippets?language=Python
     [HttpGet]
-    public ActionResult<IEnumerable<CodeSnippet>> GetAll([FromServices] ICodeSnippetProvider snippetProvider)
+    public ActionResult<IEnumerable<CodeSnippet>> GetAll(
+        [FromServices] ICodeSnippetProvider snippetProvider,
+        [FromQuery] ProgrammingLanguage? language = null)
     {
-        var snippets = snippetProvider.GetSnippets();
-        return Ok(snippets);
+        IEnumerable<CodeSnippet> snippets = snippetProvider.GetSnippets();
+
+        if (language is not null)
+        {
+            snippets = snippets.Where(s => s.Language == language);
+        }
+
+        return Ok(snippets.ToList());
+    }
+
+    // GET: /api/codesnippets/languages
+    [HttpGet("languages")]
+    public ActionResult<IEnumerable<string>> GetLanguages()
+    {
+        return Ok(Enum.GetNames<ProgrammingLanguage>());
     }
 
     // GET: /api/codesnippets/{id}

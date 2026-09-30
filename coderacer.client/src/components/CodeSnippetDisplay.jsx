@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
 
-function fetchCodeSnippet() {
-    return fetch('/api/codesnippets')
+// Enum names from the API -> labels shown on the buttons
+const LANGUAGE_LABELS = { CSharp: 'C#', Cpp: 'C++' };
+
+function fetchLanguages() {
+    return fetch('/api/codesnippets/languages')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load languages');
+            }
+
+            return response.json();
+        });
+}
+
+function fetchCodeSnippet(language) {
+    return fetch(`/api/codesnippets?language=${encodeURIComponent(language)}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Failed to load code snippet');
@@ -15,7 +29,7 @@ function fetchCodeSnippet() {
             }
 
             if (data.length === 0) {
-                throw new Error('No code snippets available');
+                throw new Error('No code snippets available for this language');
             }
 
             return data[0];
@@ -23,9 +37,21 @@ function fetchCodeSnippet() {
 }
 
 function CodeSnippetDisplay() {
+    const [languages, setLanguages] = useState([]);
+    const [languagesError, setLanguagesError] = useState(null);
+    const [selectedLanguage, setSelectedLanguage] = useState(() => {
+        try {
+            return localStorage.getItem('language');
+        } catch (e) {
+            console.error('Failed to load language from localStorage', e);
+            return null;
+        }
+    });
+
     const [snippet, setSnippet] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [retryCount, setRetryCount] = useState(0);
 
     function getDifficultyName(difficulty) {
         switch (difficulty) {
@@ -40,66 +66,112 @@ function CodeSnippetDisplay() {
         }
     }
 
-    useEffect(() => {
-        fetchCodeSnippet()
-            .then(data => {
-                setSnippet(data);
-            })
-            .catch(error => {
-                setError(error.message);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-    }, []);
+    function handleLanguageChange(name) {
+        setSelectedLanguage(name);
+
+        try {
+            localStorage.setItem('language', name);
+        } catch (e) {
+            console.error('Failed to save language to localStorage', e);
+        }
+    }
 
     function handleRetry() {
+        setRetryCount(count => count + 1);
+    }
+
+    // Load the list of available languages once.
+    useEffect(() => {
+        fetchLanguages()
+            .then(setLanguages)
+            .catch(e => setLanguagesError(e.message));
+    }, []);
+
+    // Load a snippet whenever the selected language changes (or on retry).
+    useEffect(() => {
+        if (!selectedLanguage) {
+            return;
+        }
+
+        let cancelled = false; // ignore stale responses if the language changes quickly
+
         setLoading(true);
         setError(null);
         setSnippet(null);
 
-        fetchCodeSnippet()
+        fetchCodeSnippet(selectedLanguage)
             .then(data => {
-                setSnippet(data);
+                if (!cancelled) setSnippet(data);
             })
-            .catch(error => {
-                setError(error.message);
+            .catch(e => {
+                if (!cancelled) setError(e.message);
             })
             .finally(() => {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             });
-    }
 
-    if (loading) {
-        return <p>Loading code snippet...</p>;
-    }
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedLanguage, retryCount]);
 
-    if (error) {
+    function renderSnippet() {
+        if (!selectedLanguage) {
+            return <p>Pick a language to get a code snippet.</p>;
+        }
+
+        if (loading) {
+            return <p>Loading code snippet...</p>;
+        }
+
+        if (error) {
+            return (
+                <div>
+                    <p>{error}</p>
+                    <button onClick={handleRetry}>Retry</button>
+                </div>
+            );
+        }
+
+        if (!snippet) {
+            return null;
+        }
+
         return (
-            <div>
-                <p>{error}</p>
-                <button onClick={handleRetry}>Retry</button>
+            <div className="code-snippet-section">
+                <h2 className="snippet-title">Code Snippet</h2>
+
+                <p>
+                    <strong>Concept:</strong> {snippet.programmingConcept}
+                </p>
+
+                <p>
+                    <strong>Difficulty:</strong> {getDifficultyName(snippet.difficulty)}
+                </p>
+
+                <pre>{snippet.codeText}</pre>
             </div>
         );
     }
 
-    if (!snippet) {
-        return null;
-    }
-
     return (
-        <div className="code-snippet-section">
-            <h2 className="snippet-title">Code Snippet</h2>
+        <div>
+            <h3>Select a programming language</h3>
 
-            <p>
-                <strong>Concept:</strong> {snippet.programmingConcept}
-            </p>
+            {languagesError && <p>{languagesError}</p>}
 
-            <p>
-                <strong>Difficulty:</strong> {getDifficultyName(snippet.difficulty)}
-            </p>
+            {languages.map(name => (
+                <button
+                    key={name}
+                    className={selectedLanguage === name ? 'primary-btn' : 'secondary-btn'}
+                    style={{ fontFamily: 'inherit', fontSize: 16, padding: '8px 12px', marginRight: 8 }}
+                    onClick={() => handleLanguageChange(name)}
+                >
+                    {LANGUAGE_LABELS[name] ?? name}
+                </button>
+            ))}
 
-            <pre>{snippet.codeText}</pre>
+            {renderSnippet()}
         </div>
     );
 }
