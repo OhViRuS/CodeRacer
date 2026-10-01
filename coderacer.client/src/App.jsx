@@ -97,16 +97,19 @@ function App() {
     if (gameStarted && selectedLanguage) {
         return (
             <div className="center-container">
-                <h1 className="brand">Coderacer</h1>
+                <h1 className="brand">CodeRacer</h1>
 
-                <TypingChallenge language={selectedLanguage} />
+                <TypingChallenge
+                    language={selectedLanguage}
+                    onExit={() => setGameStarted(false)}
+                />
             </div>
         );
     }
 
     return (
         <div className="center-container">
-            <h1 className="brand">Coderacer</h1>
+            <h1 className="brand">CodeRacer</h1>
 
             {lobby ? (
                 <div className="lobby-card">
@@ -122,18 +125,25 @@ function App() {
 
                     <CodeSnippetDisplay onLanguageSelected={setSelectedLanguage} />
 
-                    <button
-                        className="primary-btn"
-                        style={{ ...sharedBtnStyle, marginTop: 12 }}
-                        onClick={() => setGameStarted(true)}
-                        disabled={!selectedLanguage}
-                    >
-                        Start Game
-                    </button>
+                    <div className="lobby-actions">
+                        <button
+                            className="secondary-btn"
+                            style={sharedBtnStyle}
+                            onClick={handleClearLobby}
+                        >
+                            Close Lobby
+                        </button>
 
-                    <div style={{marginTop: 12}}>
-                        <button className="secondary-btn" style={{...sharedBtnStyle, marginLeft:8}} onClick={handleClearLobby}>Close Lobby</button>
+                        <button
+                            className="primary-btn"
+                            style={sharedBtnStyle}
+                            onClick={() => setGameStarted(true)}
+                            disabled={!selectedLanguage}
+                        >
+                            Start Game
+                        </button>
                     </div>
+
                 </div>
             ) : (
                 <div>

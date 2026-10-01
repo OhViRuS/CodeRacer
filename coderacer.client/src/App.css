@@ -96,3 +96,35 @@ th, td {
 .snippet-title {
     font-size: 28px;
 }
+
+/* Lobby action buttons */
+.lobby-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+
+/* Separates the final race results from the typing challenge statistics */
+.race-results {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 2px solid #3b2f4a;
+    text-align: left;
+}
+
+/* Adds spacing below the Race Results heading */
+.race-results h2 {
+    margin-bottom: 16px;
+}
+
+/* Adds spacing between Time, WPM, Accuracy, and Mistakes */
+.race-results p {
+    margin: 8px 0;
+}
+
+/* Moves the Back to Lobby button lower and aligns it to the left */
+.back-to-lobby {
+    margin-top: 28px;
+    text-align: left;
+}

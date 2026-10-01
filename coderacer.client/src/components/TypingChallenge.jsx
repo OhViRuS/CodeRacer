@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import RaceResults from './RaceResults';
 
 function fetchCodeSnippet(language) {
     return fetch(`/api/codesnippets?language=${encodeURIComponent(language)}`)
@@ -22,7 +23,7 @@ function fetchCodeSnippet(language) {
         });
 }
 
-function TypingChallenge({ language }) {
+function TypingChallenge({ language, onExit }) {
     const [snippet, setSnippet] = useState(null);
     const [typedText, setTypedText] = useState('');
     const [error, setError] = useState(null);
@@ -147,8 +148,25 @@ function TypingChallenge({ language }) {
             )}
 
             {isCompleted && (
-                <p>Challenge completed!</p>
+                <>
+                    <RaceResults
+                        time={elapsedTime}
+                        wpm={wpm}
+                        accuracy={accuracy}
+                        mistakes={mistakes}
+                    />
+
+                    <div className="back-to-lobby">
+                        <button
+                            className="secondary-btn"
+                            onClick={onExit}
+                        >
+                            Back to Lobby
+                        </button>
+                    </div>
+                </>
             )}
+
         </div>
     );
 }
