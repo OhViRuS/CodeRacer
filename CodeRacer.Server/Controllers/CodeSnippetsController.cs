@@ -45,6 +45,34 @@ public class CodeSnippetsController : ControllerBase
         return Ok(snippet);
     }
 
+    // GET: /api/codesnippets/random?language=Python&difficulty=Easy
+    [HttpGet("random")]
+    public ActionResult<CodeSnippet> GetRandom(
+        [FromServices] ICodeSnippetProvider snippetProvider,
+        [FromQuery] ProgrammingLanguage? language = null,
+        [FromQuery] Difficulty? difficulty = null)
+    {
+        IEnumerable<CodeSnippet> snippets = snippetProvider.GetSnippets();
+        if (language is not null)
+        {
+            snippets = snippets.Where(s => s.Language == language);
+        }
+        if (difficulty is not null)
+        {
+            snippets = snippets.Where(s => s.Difficulty == difficulty);
+        }
+        var snippetList = snippets.ToList();
+
+        if (snippetList.Count == 0)
+        {
+            return NotFound();
+        }
+
+        int index = Random.Shared.Next(0, snippetList.Count);
+        var randomSnippet = snippetList[index];
+        return Ok(randomSnippet);
+    }
+
     // POST: /api/codesnippets
     [HttpPost]
     public ActionResult<CodeSnippet> Create([FromBody] CodeSnippet snippet, [FromServices] ICodeSnippetProvider snippetProvider)
@@ -81,4 +109,5 @@ public class CodeSnippetsController : ControllerBase
         if (!removed) return NotFound();
         return NoContent();
     }
+
 }

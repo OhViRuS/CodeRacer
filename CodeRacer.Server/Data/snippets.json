@@ -26,5 +26,12 @@
     "Language": 1,
     "Difficulty": 0,
     "ProgrammingConcept": "Output"
+  },
+  {
+    "Id": "9f1c2d34-6a78-4b90-8c12-3456789abcde",
+    "CodeText": "name = input(\"Enter your name: \")\nprint(\"Hello\", name)",
+    "Language": 2,
+    "Difficulty": 0,
+    "ProgrammingConcept": "Input and Output"
   }
 ]
