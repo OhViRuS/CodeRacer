@@ -50,6 +50,17 @@ function TypingChallenge({ language, onExit }) {
         ? typedText === snippet.codeText
         : false;
 
+    let correctCharacters = 0;
+
+    if (snippet) {
+        while (
+            correctCharacters < typedText.length &&
+            typedText[correctCharacters] === snippet.codeText[correctCharacters]
+        ) {
+            correctCharacters++;
+        }
+    }
+
     useEffect(() => {
         if (startTime === null || isCompleted) {
             return;
@@ -67,7 +78,7 @@ function TypingChallenge({ language, onExit }) {
         : Math.round(((totalKeystrokes - mistakes) / totalKeystrokes) * 100);
 
     const wpm = elapsedTime > 0
-        ? Math.round((typedText.length / 5) / (elapsedTime / 60))
+        ? Math.round((totalKeystrokes / 5) / (elapsedTime / 60))
         : 0;
 
     if (error) {
@@ -118,13 +129,14 @@ function TypingChallenge({ language, onExit }) {
             <textarea
                 value={typedText}
                 onChange={handleTyping}
+                onPaste={event => event.preventDefault()}
                 placeholder="Start typing here..."
                 rows={6}
                 disabled={isCompleted}
             />
 
             <p>
-                Progress: {typedText.length} / {snippet.codeText.length}
+                Progress: {correctCharacters} / {snippet.codeText.length}
             </p>
 
             <p>
