@@ -1,6 +1,7 @@
 ﻿import './App.css';
 import { useState } from 'react';
 import CodeSnippetDisplay from './components/CodeSnippetDisplay';
+import TypingChallenge from './components/TypingChallenge';
 
 function App() {
     const [lobby, setLobby] = useState(() => {
@@ -12,6 +13,17 @@ function App() {
             return null;
         }
     });
+
+    const [selectedLanguage, setSelectedLanguage] = useState(() => {
+        try {
+            return localStorage.getItem('language');
+        } catch (e) {
+            console.error('Failed to load language from localStorage', e);
+            return null;
+        }
+    });
+
+    const [gameStarted, setGameStarted] = useState(false);
 
     const sharedBtnStyle = { fontFamily: 'inherit', fontSize: 16, padding: '8px 12px' };
 
@@ -82,9 +94,22 @@ function App() {
         localStorage.removeItem('lobby');
     }
 
+    if (gameStarted && selectedLanguage) {
+        return (
+            <div className="center-container">
+                <h1 className="brand">CodeRacer</h1>
+
+                <TypingChallenge
+                    language={selectedLanguage}
+                    onExit={() => setGameStarted(false)}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="center-container">
-            <h1 className="brand">Coderacer</h1>
+            <h1 className="brand">CodeRacer</h1>
 
             {lobby ? (
                 <div className="lobby-card">
@@ -98,11 +123,27 @@ function App() {
                         ))}
                     </ul>
 
-                    <CodeSnippetDisplay />
+                    <CodeSnippetDisplay onLanguageSelected={setSelectedLanguage} />
 
-                    <div style={{marginTop: 12}}>
-                        <button className="secondary-btn" style={{...sharedBtnStyle, marginLeft:8}} onClick={handleClearLobby}>Close Lobby</button>
+                    <div className="lobby-actions">
+                        <button
+                            className="secondary-btn"
+                            style={sharedBtnStyle}
+                            onClick={handleClearLobby}
+                        >
+                            Close Lobby
+                        </button>
+
+                        <button
+                            className="primary-btn"
+                            style={sharedBtnStyle}
+                            onClick={() => setGameStarted(true)}
+                            disabled={!selectedLanguage}
+                        >
+                            Start Game
+                        </button>
                     </div>
+
                 </div>
             ) : (
                 <div>
