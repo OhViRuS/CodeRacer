@@ -176,16 +176,18 @@ function CodeSnippetDisplay({ onLanguageSelected }) {
 
             {languagesError && <p>{languagesError}</p>}
 
-            {languages.map(name => (
-                <button
-                    key={name}
-                    className={selectedLanguage === name ? 'primary-btn' : 'secondary-btn'}
-                    style={{ fontFamily: 'inherit', fontSize: 16, padding: '8px 12px', marginRight: 8 }}
-                    onClick={() => handleLanguageChange(name)}
-                >
-                    {LANGUAGE_LABELS[name] ?? name}
-                </button>
-            ))}
+            <div className="button-container">
+                {languages.map(name => (
+                    <button
+                        key={name}
+                        className={selectedLanguage === name ? 'primary-btn selected' : 'secondary-btn'}
+                        aria-pressed={selectedLanguage === name}
+                        onClick={() => handleLanguageChange(name)}
+                    >
+                        {LANGUAGE_LABELS[name] ?? name}
+                    </button>
+                ))}
+            </div>
 
             {renderSnippet()}
         </div>

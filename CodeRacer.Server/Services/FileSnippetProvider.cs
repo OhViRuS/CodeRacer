@@ -61,13 +61,18 @@ public class FileSnippetProvider : ICodeSnippetProvider
         }
     }
 
-    public void AddSnippet(CodeSnippet snippet)
+    public void AddSnippet(CodeSnippet snippet, bool validateDuplicate = true)
     {
         if (snippet == null) throw new ArgumentNullException(nameof(snippet));
 
         lock (_modifyLock)
         {
             var current = GetSnippets();
+
+            if (validateDuplicate && current.Any(s => s.CodeText == snippet.CodeText))
+            {
+                throw new InvalidOperationException("A snippet with identical code text already exists.");
+            }
 
             if (snippet.Id == Guid.Empty)
             {

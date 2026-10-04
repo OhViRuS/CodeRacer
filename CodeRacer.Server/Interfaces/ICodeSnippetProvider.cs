@@ -7,7 +7,7 @@ public interface ICodeSnippetProvider
 {
     List<CodeSnippet> GetSnippets(string filePath = "Data/snippets.json");
 
-    void AddSnippet(CodeSnippet snippet);
+    void AddSnippet(CodeSnippet snippet, bool validateDuplicate = true);
 
     bool UpdateSnippet(Guid id, CodeSnippet updatedSnippet);
 

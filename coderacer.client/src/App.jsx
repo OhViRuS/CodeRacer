@@ -1,5 +1,6 @@
 ﻿import './App.css';
 import { useState } from 'react';
+import Modal from './components/Modal';
 import CodeSnippetDisplay from './components/CodeSnippetDisplay';
 import TypingChallenge from './components/TypingChallenge';
 
@@ -24,8 +25,14 @@ function App() {
     });
 
     const [gameStarted, setGameStarted] = useState(false);
-
-    const sharedBtnStyle = { fontFamily: 'inherit', fontSize: 16, padding: '8px 12px' };
+    const [createLobbyModalOpen, setCreateLobbyModalOpen] = useState(false);
+    const [joinLobbyModalOpen, setJoinLobbyModalOpen] = useState(false);
+    const [closeLobbyModalOpen, setCloseLobbyModalOpen] = useState(false);
+    const [createLobbyName, setCreateLobbyName] = useState('');
+    const [joinLobbyId, setJoinLobbyId] = useState('');
+    const [joinLobbyName, setJoinLobbyName] = useState('');
+    const [createLobbyError, setCreateLobbyError] = useState('');
+    const [joinLobbyError, setJoinLobbyError] = useState('');
 
     function saveLobbyToStorage(newLobby) {
         try {
@@ -35,12 +42,10 @@ function App() {
         }
     }
 
-    function handleCreateLobby() {
-        const name = window.prompt('Enter your name to create a lobby:');
-        if (name === null) return; // canceled
-        const trimmed = name.trim();
+    function handleCreateLobbySubmit() {
+        const trimmed = createLobbyName.trim();
         if (!trimmed) {
-            alert('Name cannot be empty. Please try again.');
+            setCreateLobbyError('Name cannot be empty. Please enter a name.');
             return;
         }
 
@@ -53,24 +58,22 @@ function App() {
 
         setLobby(newLobby);
         saveLobbyToStorage(newLobby);
-        // TODO: replace with actual API call / navigation to real lobby
+        setCreateLobbyModalOpen(false);
+        setCreateLobbyName('');
+        setCreateLobbyError('');
         console.log('Created lobby', newLobby);
     }
 
-    function handleJoinLobby() {
-        const lobbyId = window.prompt('Enter the lobby ID to join:');
-        if (lobbyId === null) return; // canceled
-        const trimmedId = lobbyId.trim();
+    function handleJoinLobbySubmit() {
+        const trimmedId = joinLobbyId.trim();
         if (!trimmedId) {
-            alert('Lobby ID cannot be empty. Please try again.');
+            setJoinLobbyError('Lobby ID cannot be empty. Please enter a lobby ID.');
             return;
         }
 
-        const name = window.prompt('Enter your name to join the lobby:');
-        if (name === null) return; // canceled
-        const trimmed = name.trim();
-        if (!trimmed) {
-            alert('Name cannot be empty. Please try again.');
+        const trimmedName = joinLobbyName.trim();
+        if (!trimmedName) {
+            setJoinLobbyError('Name cannot be empty. Please enter a name.');
             return;
         }
 
@@ -78,20 +81,28 @@ function App() {
         const joinedLobby = {
             id: trimmedId,
             host: 'Unknown',
-            players: [trimmed],
+            players: [trimmedName],
             createdAt: new Date().toISOString(),
         };
 
         setLobby(joinedLobby);
         saveLobbyToStorage(joinedLobby);
+        setJoinLobbyModalOpen(false);
+        setJoinLobbyId('');
+        setJoinLobbyName('');
+        setJoinLobbyError('');
         console.log('Joined lobby', joinedLobby);
     }
 
     function handleClearLobby() {
+        setCloseLobbyModalOpen(true);
+    }
+
+    function handleConfirmCloseLobby() {
         if (!lobby) return;
-        if (!window.confirm('Close and remove the current lobby?')) return;
         setLobby(null);
         localStorage.removeItem('lobby');
+        setCloseLobbyModalOpen(false);
     }
 
     if (gameStarted && selectedLanguage) {
@@ -128,7 +139,6 @@ function App() {
                     <div className="lobby-actions">
                         <button
                             className="secondary-btn"
-                            style={sharedBtnStyle}
                             onClick={handleClearLobby}
                         >
                             Close Lobby
@@ -136,7 +146,6 @@ function App() {
 
                         <button
                             className="primary-btn"
-                            style={sharedBtnStyle}
                             onClick={() => setGameStarted(true)}
                             disabled={!selectedLanguage}
                         >
@@ -144,11 +153,115 @@ function App() {
                         </button>
                     </div>
 
+                    {/* Close Lobby Confirmation Modal */}
+                    <Modal 
+                        isOpen={closeLobbyModalOpen} 
+                        title="Close Lobby" 
+                        onClose={() => setCloseLobbyModalOpen(false)}
+                    >
+                        <p>Are you sure you want to close and remove the current lobby?</p>
+                        <div className="modal-actions">
+                            <button 
+                                className="btn-primary"
+                                onClick={handleConfirmCloseLobby}
+                            >
+                                Close Lobby
+                            </button>
+                            <button 
+                                className="btn-secondary" 
+                                onClick={() => setCloseLobbyModalOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </Modal>
                 </div>
             ) : (
                 <div>
-                    <button className="primary-btn" style={sharedBtnStyle} onClick={handleCreateLobby}>Create Lobby</button>
-                    <button className="secondary-btn" style={{...sharedBtnStyle, marginLeft:8}} onClick={handleJoinLobby}>Join Lobby</button>
+                    <div className="button-container">
+                        <button className="primary-btn" onClick={() => {
+                            setCreateLobbyModalOpen(true);
+                            setCreateLobbyError('');
+                        }}>Create Lobby</button>
+                        <button className="primary-btn" onClick={() => {
+                            setJoinLobbyModalOpen(true);
+                            setJoinLobbyError('');
+                        }}>Join Lobby</button>
+                    </div>
+
+                    {/* Create Lobby Modal */}
+                    <Modal 
+                        isOpen={createLobbyModalOpen} 
+                        title="Create Lobby" 
+                        onClose={() => {
+                            setCreateLobbyModalOpen(false);
+                            setCreateLobbyError('');
+                        }}
+                    >
+                        {createLobbyError && <div className="modal-error">{createLobbyError}</div>}
+                        <input
+                            type="text"
+                            placeholder="Enter your name"
+                            value={createLobbyName}
+                            onChange={(e) => setCreateLobbyName(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleCreateLobbySubmit()}
+                            autoFocus
+                        />
+                        <div className="modal-actions">
+                            <button 
+                                className="btn-primary" 
+                                onClick={handleCreateLobbySubmit}
+                            >
+                                Create
+                            </button>
+                            <button 
+                                className="btn-secondary" 
+                                onClick={() => setCreateLobbyModalOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </Modal>
+
+                    {/* Join Lobby Modal */}
+                    <Modal 
+                        isOpen={joinLobbyModalOpen} 
+                        title="Join Lobby" 
+                        onClose={() => {
+                            setJoinLobbyModalOpen(false);
+                            setJoinLobbyError('');
+                        }}
+                    >
+                        {joinLobbyError && <div className="modal-error">{joinLobbyError}</div>}
+                        <input
+                            type="text"
+                            placeholder="Enter lobby ID"
+                            value={joinLobbyId}
+                            onChange={(e) => setJoinLobbyId(e.target.value)}
+                            autoFocus
+                        />
+                        <input
+                            type="text"
+                            placeholder="Enter your name"
+                            value={joinLobbyName}
+                            onChange={(e) => setJoinLobbyName(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleJoinLobbySubmit()}
+                        />
+                        <div className="modal-actions">
+                            <button 
+                                className="btn-primary" 
+                                onClick={handleJoinLobbySubmit}
+                            >
+                                Join
+                            </button>
+                            <button 
+                                className="btn-secondary" 
+                                onClick={() => setJoinLobbyModalOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </Modal>
                 </div>
             )}
         </div>

@@ -19,7 +19,7 @@ public class CodeSnippetsController : ControllerBase
         [FromServices] ICodeSnippetProvider snippetProvider,
         [FromQuery] ProgrammingLanguage? language = null)
     {
-        IEnumerable<CodeSnippet> snippets = snippetProvider.GetSnippets();
+        IEnumerable<CodeSnippet> snippets = snippetProvider.GetSnippets(filePath: "Data/snippets.json");
 
         if (language is not null)
         {
@@ -40,7 +40,7 @@ public class CodeSnippetsController : ControllerBase
     [HttpGet("{id:guid}")]
     public ActionResult<CodeSnippet> GetById(Guid id, [FromServices] ICodeSnippetProvider snippetProvider)
     {
-        var snippet = snippetProvider.GetSnippets().FirstOrDefault(s => s.Id == id);
+        var snippet = snippetProvider.GetSnippets(filePath: "Data/snippets.json").FirstOrDefault(s => s.Id == id);
         if (snippet == null) return NotFound();
         return Ok(snippet);
     }
@@ -52,7 +52,7 @@ public class CodeSnippetsController : ControllerBase
         if (snippet == null) return BadRequest();
 
         snippet.Id = snippet.Id == Guid.Empty ? Guid.NewGuid() : snippet.Id;
-        snippetProvider.AddSnippet(snippet);
+        snippetProvider.AddSnippet(snippet: snippet, validateDuplicate: true);
 
         return CreatedAtAction(
             nameof(GetById),

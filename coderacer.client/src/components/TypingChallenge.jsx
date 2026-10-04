@@ -67,7 +67,7 @@ function TypingChallenge({ language, onExit }) {
         : Math.round(((totalKeystrokes - mistakes) / totalKeystrokes) * 100);
 
     const wpm = elapsedTime > 0
-        ? Math.round((typedText.length / 5) / (elapsedTime / 60))
+        ? Math.round((totalKeystrokes / 5) / (elapsedTime / 60))
         : 0;
 
     if (error) {
