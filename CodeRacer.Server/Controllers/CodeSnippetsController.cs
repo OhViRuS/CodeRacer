@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using CodeRacer.Server.Models;
 using CodeRacer.Server.Interfaces;
+using CodeRacer.Server.Exceptions;
 using System.Collections.Generic;
 using System.Linq;
 using System;
-
 namespace CodeRacer.Server.Controllers;
 
 [ApiController]
@@ -52,7 +52,14 @@ public class CodeSnippetsController : ControllerBase
         if (snippet == null) return BadRequest();
 
         snippet.Id = snippet.Id == Guid.Empty ? Guid.NewGuid() : snippet.Id;
-        snippetProvider.AddSnippet(snippet: snippet, validateDuplicate: true);
+        try
+        {
+            snippetProvider.AddSnippet(snippet: snippet, validateDuplicate: true);
+        }
+        catch (DuplicateSnippetException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
 
         return CreatedAtAction(
             nameof(GetById),
