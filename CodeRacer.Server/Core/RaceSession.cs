@@ -8,15 +8,24 @@ public class RaceSession
     private readonly Stopwatch _stopwatch = new();
     private readonly List<CharacterMistake> _mistakes = new();
     private int _totalErrorsCount = 0;
+    private readonly bool _enableDetailedTracking;
+    private readonly int _maxMistakesToTrack;
 
-    public RaceSession(CodeSnippet snippet)
+    public RaceSession(CodeSnippet snippet, bool enableDetailedTracking = true, int maxMistakesToTrack = 500)
     {
         if (snippet == null || string.IsNullOrWhiteSpace(snippet.CodeText))
         {
             throw new ArgumentException("The text cannot be empty");
         }
 
+        if (maxMistakesToTrack < 0)
+        {
+            throw new ArgumentException("maxMistakesToTrack cannot be negative", nameof(maxMistakesToTrack));
+        }
+
         Snippet = snippet;
+        _enableDetailedTracking = enableDetailedTracking;
+        _maxMistakesToTrack = maxMistakesToTrack;
     }
 
     public CodeSnippet Snippet { get; }
@@ -42,7 +51,7 @@ public class RaceSession
 
         _totalErrorsCount++;
 
-        if (_mistakes.Count < 500)
+        if (_enableDetailedTracking && _mistakes.Count < _maxMistakesToTrack)
         {
             _mistakes.Add(new CharacterMistake
             {
@@ -54,7 +63,7 @@ public class RaceSession
         return false;
     }
 
-    public RaceResult GetResult()
+    public RaceResult GetResult(bool includeDetailedStats = false)
     {
         if (!IsCompleted)
         {
@@ -83,6 +92,8 @@ public class RaceSession
             accuracy = 100;
         }
 
+        // Optional detailed stats could be surfaced via a separate method or property if needed
+        // For now, the parameter enables future extensibility for additional calculations
         return new RaceResult(time, wpm, accuracy);
     }
 }

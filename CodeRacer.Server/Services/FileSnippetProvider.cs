@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using CodeRacer.Server.Models;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Extensions;
+using CodeRacer.Server.Exceptions;
 using System.Linq;
 
 namespace CodeRacer.Server.Services;
@@ -61,7 +62,7 @@ public class FileSnippetProvider : ICodeSnippetProvider
         }
     }
 
-    public void AddSnippet(CodeSnippet snippet)
+    public void AddSnippet(CodeSnippet snippet, bool validateDuplicate = true)
     {
         if (snippet == null) throw new ArgumentNullException(nameof(snippet));
 
@@ -69,12 +70,17 @@ public class FileSnippetProvider : ICodeSnippetProvider
         {
             var current = GetSnippets();
 
+            snippet.CodeText = snippet.CodeText.NormalizeSnippet();
+
+            if (validateDuplicate && current.Any(s => s.CodeText == snippet.CodeText))
+            {
+                throw new DuplicateSnippetException();
+            }
+
             if (snippet.Id == Guid.Empty)
             {
                 snippet.Id = Guid.NewGuid();
             }
-
-            snippet.CodeText = snippet.CodeText.NormalizeSnippet();
 
             _cachedSnippets!.Add(snippet);
         }
