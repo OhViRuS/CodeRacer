@@ -88,6 +88,27 @@ function TypingChallenge({ language, onExit }) {
     if (!snippet) {
         return <p>Loading challenge...</p>;
     }
+    if (isCompleted) {
+        return (
+            <div className="typing-challenge results-screen">
+                <h2 className="challenge-title">Race Complete</h2>
+
+                <RaceResults
+                    time={elapsedTime}
+                    wpm={wpm}
+                    accuracy={accuracy}
+                    mistakes={mistakes}
+                />
+
+                <button
+                    className="primary-btn"
+                    onClick={onExit}
+                >
+                    Back to Lobby
+                </button>
+            </div>
+        );
+    }
 
     function handleTyping(event) {
         const newText = event.target.value;
@@ -122,22 +143,70 @@ function TypingChallenge({ language, onExit }) {
 
     return (
         <div className="typing-challenge">
-            <h2>Typing Challenge</h2>
+            <h2 className="challenge-title">Typing Challenge</h2>
 
-            <pre>{snippet.codeText}</pre>
+            <div className="code-area">
+                <p className="section-label">CODE TO TYPE</p>
 
-            <textarea
-                value={typedText}
-                onChange={handleTyping}
-                onPaste={event => event.preventDefault()}
-                placeholder="Start typing here..."
-                rows={6}
-                disabled={isCompleted}
-            />
+                <pre className="code-display">
+                    {snippet.codeText}
+                </pre>
 
-            <p>
-                Progress: {correctCharacters} / {snippet.codeText.length}
-            </p>
+                <div className="progress-section">
+                    <div className="progress-labels">
+                        <span>START</span>
+                        <span>FINISH</span>
+                    </div>
+
+                    <div className="progress-track">
+                        <div
+                            className="progress-fill"
+                            style={{
+                                width: `${(correctCharacters / snippet.codeText.length) * 100}%`
+                            }}
+                        />
+
+                        <span
+                            className="progress-marker"
+                            style={{
+                                left: `${(correctCharacters / snippet.codeText.length) * 100}%`
+                            }}
+                        >
+                            &lt;/&gt;
+                        </span>
+                    </div>
+
+                    <div className="progress-percentage">
+                        {Math.round(
+                            (correctCharacters / snippet.codeText.length) * 100
+                        )}%
+                    </div>
+                </div>
+
+                <div className="typing-warning-container">
+                    {!isCorrectSoFar && (
+                        <div className="typing-warning">
+                            ✕ Incorrect character
+                        </div>
+                    )}
+                </div>
+
+                <p className="section-label">YOUR INPUT</p>
+
+                <textarea
+                    className={`typing-input ${!isCorrectSoFar ? 'typing-input-error' : ''}`}
+                    value={typedText}
+                    onChange={handleTyping}
+                    onPaste={event => event.preventDefault()}
+                    placeholder="Start typing here..."
+                    rows={6}
+                    disabled={isCompleted}
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    autoComplete="off"
+                />
+            </div>
 
             <p>
                 Mistakes: {mistakes}
@@ -154,10 +223,6 @@ function TypingChallenge({ language, onExit }) {
             <p>
                 Time: {elapsedTime.toFixed(1)} seconds
             </p>
-
-            {!isCorrectSoFar && (
-                <p>Incorrect character!</p>
-            )}
 
             {isCompleted && (
                 <>
@@ -178,7 +243,6 @@ function TypingChallenge({ language, onExit }) {
                     </div>
                 </>
             )}
-
         </div>
     );
 }
