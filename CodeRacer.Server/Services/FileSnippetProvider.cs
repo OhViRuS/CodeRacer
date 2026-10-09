@@ -1,12 +1,12 @@
-﻿using System;
-using System.IO;
-using System.Text.Json;
+using System;
 using System.Collections.Generic;
-using CodeRacer.Server.Models;
-using CodeRacer.Server.Interfaces;
-using CodeRacer.Server.Extensions;
-using CodeRacer.Server.Exceptions;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+using CodeRacer.Server.Exceptions;
+using CodeRacer.Server.Extensions;
+using CodeRacer.Server.Interfaces;
+using CodeRacer.Server.Models;
 
 namespace CodeRacer.Server.Services;
 
@@ -64,7 +64,10 @@ public class FileSnippetProvider : ICodeSnippetProvider
 
     public void AddSnippet(CodeSnippet snippet, bool validateDuplicate = true)
     {
-        if (snippet == null) throw new ArgumentNullException(nameof(snippet));
+        if (snippet == null)
+        {
+            throw new ArgumentNullException(nameof(snippet));
+        }
 
         lock (_modifyLock)
         {
@@ -88,13 +91,19 @@ public class FileSnippetProvider : ICodeSnippetProvider
 
     public bool UpdateSnippet(Guid id, CodeSnippet updatedSnippet)
     {
-        if (updatedSnippet == null) throw new ArgumentNullException(nameof(updatedSnippet));
+        if (updatedSnippet == null)
+        {
+            throw new ArgumentNullException(nameof(updatedSnippet));
+        }
 
         lock (_modifyLock)
         {
             GetSnippets();
             var existing = _cachedSnippets!.FirstOrDefault(s => s.Id == id);
-            if (existing == null) return false;
+            if (existing == null)
+            {
+                return false;
+            }
 
             existing.CodeText = updatedSnippet.CodeText.NormalizeSnippet();
             existing.Language = updatedSnippet.Language;
@@ -111,7 +120,10 @@ public class FileSnippetProvider : ICodeSnippetProvider
         {
             GetSnippets();
             var existing = _cachedSnippets!.FirstOrDefault(s => s.Id == id);
-            if (existing == null) return false;
+            if (existing == null)
+            {
+                return false;
+            }
 
             return _cachedSnippets!.Remove(existing);
         }

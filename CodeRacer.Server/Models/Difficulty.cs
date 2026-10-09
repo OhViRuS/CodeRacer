@@ -1,9 +1,8 @@
-﻿namespace CodeRacer.Server.Models
+namespace CodeRacer.Server.Models;
+
+public enum Difficulty
 {
-    public enum Difficulty
-    {
-        Easy,
-        Medium,
-        Hard
-    }
+    Easy,
+    Medium,
+    Hard
 }
