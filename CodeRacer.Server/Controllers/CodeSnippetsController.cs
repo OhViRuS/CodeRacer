@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using CodeRacer.Server.Models;
-using CodeRacer.Server.Interfaces;
-using CodeRacer.Server.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System;
+using CodeRacer.Server.Exceptions;
+using CodeRacer.Server.Interfaces;
+using CodeRacer.Server.Models;
+using Microsoft.AspNetCore.Mvc;
+
 namespace CodeRacer.Server.Controllers;
 
 [ApiController]
@@ -41,7 +42,11 @@ public class CodeSnippetsController : ControllerBase
     public ActionResult<CodeSnippet> GetById(Guid id, [FromServices] ICodeSnippetProvider snippetProvider)
     {
         var snippet = snippetProvider.GetSnippets(filePath: "Data/snippets.json").FirstOrDefault(s => s.Id == id);
-        if (snippet == null) return NotFound();
+        if (snippet == null)
+        {
+            return NotFound();
+        }
+
         return Ok(snippet);
     }
 
@@ -77,7 +82,10 @@ public class CodeSnippetsController : ControllerBase
     [HttpPost]
     public ActionResult<CodeSnippet> Create([FromBody] CodeSnippet snippet, [FromServices] ICodeSnippetProvider snippetProvider)
     {
-        if (snippet == null) return BadRequest();
+        if (snippet == null)
+        {
+            return BadRequest();
+        }
 
         snippet.Id = snippet.Id == Guid.Empty ? Guid.NewGuid() : snippet.Id;
         try
@@ -100,11 +108,22 @@ public class CodeSnippetsController : ControllerBase
     [HttpPut("{id:guid}")]
     public IActionResult Update(Guid id, [FromBody] CodeSnippet updatedSnippet, [FromServices] ICodeSnippetProvider snippetProvider)
     {
-        if (updatedSnippet == null) return BadRequest();
-        if (id != updatedSnippet.Id) return BadRequest("Route id does not match snippet id.");
+        if (updatedSnippet == null)
+        {
+            return BadRequest();
+        }
+
+        if (id != updatedSnippet.Id)
+        {
+            return BadRequest("Route id does not match snippet id.");
+        }
 
         var updated = snippetProvider.UpdateSnippet(id, updatedSnippet);
-        if (!updated) return NotFound();
+        if (!updated)
+        {
+            return NotFound();
+        }
+
         return NoContent();
     }
 
@@ -113,7 +132,11 @@ public class CodeSnippetsController : ControllerBase
     public IActionResult Delete(Guid id, [FromServices] ICodeSnippetProvider snippetProvider)
     {
         var removed = snippetProvider.DeleteSnippet(id);
-        if (!removed) return NotFound();
+        if (!removed)
+        {
+            return NotFound();
+        }
+
         return NoContent();
     }
 

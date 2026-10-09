@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using CodeRacer.Server.Models;
 
 namespace CodeRacer.Server.Core;
@@ -36,8 +36,15 @@ public class RaceSession
 
     public bool TypeCharacter(char typed)
     {
-        if (IsCompleted) return false;
-        if (!_stopwatch.IsRunning) _stopwatch.Start();
+        if (IsCompleted)
+        {
+            return false;
+        }
+
+        if (!_stopwatch.IsRunning)
+        {
+            _stopwatch.Start();
+        }
 
         TotalKeystrokes++;
         char expected = Snippet.CodeText[CurrentPosition];
@@ -45,7 +52,11 @@ public class RaceSession
         if (typed == expected)
         {
             CurrentPosition++;
-            if (IsCompleted) _stopwatch.Stop();
+            if (IsCompleted)
+            {
+                _stopwatch.Stop();
+            }
+
             return true;
         }
 

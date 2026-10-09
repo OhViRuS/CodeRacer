@@ -1,10 +1,9 @@
-﻿namespace CodeRacer.Server.Models
+namespace CodeRacer.Server.Models;
+
+public enum ProgrammingLanguage
 {
-    public enum ProgrammingLanguage
-    {
-        CSharp,
-        Cpp,
-        Python,
-        JavaScript
-    }
+    CSharp,
+    Cpp,
+    Python,
+    JavaScript
 }
