@@ -39,7 +39,7 @@ This allows users to practice not only generic programming examples but also syn
 
 ## Contributing
 
-Branch naming, code formatting and pull request process: see [CONTRIBUTING.md](CONTRIBUTING.md). Every new pull request also gets [`.github/pull_request_template.md`](.github/pull_request_template.md) pre-filled.
+Branch naming, code formatting and pull request process: see [CONTRIBUTING.md](CONTRIBUTING.md). Every new pull request also gets [`docs/pull_request_template.md`](docs/pull_request_template.md) pre-filled.
 
 ## Development Roadmap
 
@@ -48,7 +48,7 @@ The planned development of CodeRacer, including the Alpha, Beta, and Final versi
 ## Prerequisites
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - A current [Node.js LTS](https://nodejs.org/) release with npm
-- [Visual Studio 2026](https://visualstudio.microsoft.com/downloads/) with the ASP.NET and web development workload
+- [Visual Studio 2026](https://visualstudio.microsoft.com/downloads/) with the ASP.NET and web development workload, [Visual Studio Code](https://code.visualstudio.com/) with C# Dev Kit, or JetBrains Rider
 - A trusted ASP.NET Core development certificate: `dotnet dev-certs https --trust`
 
 ## Build and Run

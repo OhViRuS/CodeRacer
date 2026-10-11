@@ -1,6 +1,6 @@
 ## Before You Start
 
-See [`docs/definition-of-done.md`](docs/definition-of-done.md) for what "finished" means here, and [`CODING_STYLE.md](.github/CODING_STYLE.md) for the uniform coding style that must be used.
+See [`docs/definition-of-done.md`](docs/definition-of-done.md) for what "finished" means here, and [`CODING_STYLE.md`](CODING_STYLE.md) for the uniform coding style that must be used.
 
 ## Branch Naming
 
@@ -23,7 +23,7 @@ Example &mdash; Tomas picks up issue #12, "Add session search":
 ## Opening a Pull Request
 
 - Every change ships as a pull request into `main` - no direct pushes, even for small fixes.
-- GitHub pre-fills the description from [`.github/pull_request_template.md`](.github/pull_request_template.md) - fill it in for real, don't leave the placeholders.
+- GitHub pre-fills the description from [`docs/pull_request_template.md`](docs/pull_request_template.md) - fill it in for real, don't leave the placeholders.
 - Before marking it ready for review, check it against [`docs/definition-of-done.md`](docs/definition-of-done.md).
 
 ## Filing Issues
