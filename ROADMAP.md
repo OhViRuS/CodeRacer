@@ -8,26 +8,26 @@ functionality to the requirements of each lab assignment.
 
 ### Features
 
-- [ ] Select a programming language.
-- [ ] Receive a predefined code snippet.
-- [ ] Complete a typing challenge.
-- [ ] Detect incorrectly typed characters.
-- [ ] Track completion time.
-- [ ] Calculate typing speed.
-- [ ] Calculate accuracy.
-- [ ] Display race results.
+- [x] Select a programming language.
+- [x] Receive a predefined code snippet.
+- [x] Complete a typing challenge.
+- [x] Detect incorrectly typed characters.
+- [x] Track completion time.
+- [x] Calculate typing speed.
+- [x] Calculate accuracy.
+- [x] Display race results.
 
 ### Requirement Coverage
 
-- [ ] Own `class`, `struct`, `record` and `enum`.
-- [ ] At least one immutable type.
-- [ ] Properties in `class` and `struct`.
-- [ ] Named and optional arguments.
-- [ ] Extension method.
-- [ ] Appropriate collection iteration.
-- [ ] Stream used to load code snippets.
-- [ ] LINQ to Objects.
-- [ ] Standard .NET interface implementation.
+- [x] Own `class`, `struct`, `record` and `enum`.
+- [x] At least one immutable type.
+- [x] Properties in `class` and `struct`.
+- [x] Named and optional arguments.
+- [x] Extension method.
+- [x] Appropriate collection iteration.
+- [x] Stream used to load code snippets.
+- [x] LINQ to Objects.
+- [x] Standard .NET interface implementation.
 
 ## Beta - matches Lab Assignment #2 (lectures 7-10)
 
@@ -47,7 +47,7 @@ functionality to the requirements of each lab assignment.
 
 - [ ] Entity Framework and relational database.
 - [ ] Generic type and generic method.
-- [ ] Custom exception.
+- [x] Custom exception.
 - [ ] `async`/`await` for I/O.
 - [ ] Shared memory/concurrency scenario.
 - [ ] Dependency Injection.

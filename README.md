@@ -36,9 +36,41 @@ Users will be able to:
 
 This allows users to practice not only generic programming examples but also syntax and code structures that appear in their own projects.
 
+
+## Contributing
+
+Branch naming, code formatting and pull request process: see [CONTRIBUTING.md](CONTRIBUTING.md). Every new pull request also gets [`.github/pull_request_template.md`](.github/pull_request_template.md) pre-filled.
+
 ## Development Roadmap
 
 The planned development of CodeRacer, including the Alpha, Beta, and Final versions, is described in [ROADMAP.md](ROADMAP.md).
+
+## Prerequisites
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- A current [Node.js LTS](https://nodejs.org/) release with npm
+- [Visual Studio 2026](https://visualstudio.microsoft.com/downloads/) with the ASP.NET and web development workload
+- A trusted ASP.NET Core development certificate: `dotnet dev-certs https --trust`
+
+## Build and Run
+
+From the repository root:
+
+```pwsh
+dotnet restore
+dotnet build
+dotnet run
+```
+
+On the first Debug build, MSBuild installs the frontend dependencies. Running the backend starts the React development server through the ASP.NET Core SPA proxy. Open the HTTPS address printed by `dotnet run` (the default project profile uses `https://localhost:7039`).
+
+Useful frontend commands can also be run directly:
+
+```pwsh
+cd coderacer.client
+npm ci
+npm test
+npm run build
+```
 
 ## Technologies
 
