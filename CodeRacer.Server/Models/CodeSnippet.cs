@@ -1,19 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace CodeRacer.Server.Models
+namespace CodeRacer.Server.Models;
+
+public class CodeSnippet
 {
-    public class CodeSnippet
-    {
-        public Guid Id { get; set; }
+    public Guid Id { get; set; }
 
-        [Required]
-        public string CodeText { get; set; } = string.Empty;
+    [Required]
+    public string CodeText { get; set; } = string.Empty;
 
-        public ProgrammingLanguage Language { get; set; }
+    public ProgrammingLanguage Language { get; set; }
 
-        public Difficulty Difficulty { get; set; }
+    public Difficulty Difficulty { get; set; }
 
-        [Required]
-        public string ProgrammingConcept { get; set; } = string.Empty;
-    }
+    [Required]
+    public string ProgrammingConcept { get; set; } = string.Empty;
 }
