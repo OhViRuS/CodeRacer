@@ -56,19 +56,20 @@ The planned development of CodeRacer, including the Alpha, Beta, and Final versi
 From the repository root:
 
 ```pwsh
+cd CodeRacer.Server
 dotnet restore
 dotnet build
 dotnet run
 ```
 
-On the first Debug build, MSBuild installs the frontend dependencies. Running the backend starts the React development server through the ASP.NET Core SPA proxy. Open the HTTPS address printed by `dotnet run` (the default project profile uses `https://localhost:7039`).
+On the first Debug build, MSBuild installs the frontend dependencies. Running the backend starts the React development server through the ASP.NET Core SPA proxy. Open the HTTPS address printed by `dotnet run` (the default project profile uses `https://localhost:7161`).
 
 Useful frontend commands can also be run directly:
 
 ```pwsh
 cd coderacer.client
 npm ci
-npm test
+npm run lint
 npm run build
 ```
 
