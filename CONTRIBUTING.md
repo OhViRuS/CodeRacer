@@ -18,7 +18,7 @@ Example &mdash; Tomas picks up issue #12, "Add session search":
 
 - **Backend (C#):** run `dotnet format` before committing so contributions read the same regardless of which IDE wrote them.
 - **Frontend (JavaScript):** match the style already used under `coderacer.client/src` - most editors pick this up automatically if you have a formatter (Prettier/ESLint) configured.
-- Whichever IDE you use (Visual Studio, VS Code, or Rider, turning on "format on save" makes this automatic instead of a manual step before every commit.
+- Whichever IDE you use (Visual Studio, VS Code, or Rider), turning on "format on save" makes this automatic instead of a manual step before every commit.
 
 ## Opening a Pull Request
 
