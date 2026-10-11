@@ -1,4 +1,4 @@
-﻿import './App.css';
+import './App.css';
 import { useState } from 'react';
 import Modal from './components/Modal';
 import CodeSnippetDisplay from './components/CodeSnippetDisplay';
@@ -131,7 +131,7 @@ function App() {
             </p>
 
             {lobby ? (
-                <div className="lobby-card">
+                <div key="lobby" className="lobby-card">
                     <h2>Lobby</h2>
                     <p><strong>ID:</strong> {lobby.id}</p>
                     <p><strong>Host:</strong> {lobby.host}</p>
@@ -162,21 +162,21 @@ function App() {
                     </div>
 
                     {/* Close Lobby Confirmation Modal */}
-                    <Modal 
-                        isOpen={closeLobbyModalOpen} 
-                        title="Close Lobby" 
+                    <Modal
+                        isOpen={closeLobbyModalOpen}
+                        title="Close Lobby"
                         onClose={() => setCloseLobbyModalOpen(false)}
                     >
                         <p>Are you sure you want to close and remove the current lobby?</p>
                         <div className="modal-actions">
-                            <button 
+                            <button
                                 className="btn-primary"
                                 onClick={handleConfirmCloseLobby}
                             >
                                 Close Lobby
                             </button>
-                            <button 
-                                className="btn-secondary" 
+                            <button
+                                className="btn-secondary"
                                 onClick={() => setCloseLobbyModalOpen(false)}
                             >
                                 Cancel
@@ -185,7 +185,7 @@ function App() {
                     </Modal>
                 </div>
             ) : (
-                <div>
+                <div key="landing" className="screen-enter">
                     <div className="button-container">
                         <button className="primary-btn" onClick={() => {
                             setCreateLobbyModalOpen(true);
@@ -198,9 +198,9 @@ function App() {
                     </div>
 
                     {/* Create Lobby Modal */}
-                    <Modal 
-                        isOpen={createLobbyModalOpen} 
-                        title="Create Lobby" 
+                    <Modal
+                        isOpen={createLobbyModalOpen}
+                        title="Create Lobby"
                         onClose={() => {
                             setCreateLobbyModalOpen(false);
                             setCreateLobbyError('');
@@ -216,14 +216,14 @@ function App() {
                             autoFocus
                         />
                         <div className="modal-actions">
-                            <button 
-                                className="btn-primary" 
+                            <button
+                                className="btn-primary"
                                 onClick={handleCreateLobbySubmit}
                             >
                                 Create
                             </button>
-                            <button 
-                                className="btn-secondary" 
+                            <button
+                                className="btn-secondary"
                                 onClick={() => setCreateLobbyModalOpen(false)}
                             >
                                 Cancel
@@ -232,9 +232,9 @@ function App() {
                     </Modal>
 
                     {/* Join Lobby Modal */}
-                    <Modal 
-                        isOpen={joinLobbyModalOpen} 
-                        title="Join Lobby" 
+                    <Modal
+                        isOpen={joinLobbyModalOpen}
+                        title="Join Lobby"
                         onClose={() => {
                             setJoinLobbyModalOpen(false);
                             setJoinLobbyError('');
@@ -256,14 +256,14 @@ function App() {
                             onKeyPress={(e) => e.key === 'Enter' && handleJoinLobbySubmit()}
                         />
                         <div className="modal-actions">
-                            <button 
-                                className="btn-primary" 
+                            <button
+                                className="btn-primary"
                                 onClick={handleJoinLobbySubmit}
                             >
                                 Join
                             </button>
-                            <button 
-                                className="btn-secondary" 
+                            <button
+                                className="btn-secondary"
                                 onClick={() => setJoinLobbyModalOpen(false)}
                             >
                                 Cancel

@@ -1,4 +1,4 @@
-﻿body {
+body {
     font-weight: 400;
 }
 
@@ -47,25 +47,24 @@ th, td {
     border-radius: 6px;
     cursor: pointer;
     font-family: inherit;
-    transition: background-color 0.2s;
     box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
 }
 
-.primary-btn:hover {
-    background: #B45309;
-    box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3);
-}
+    .primary-btn:hover {
+        background: #B45309;
+        box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3);
+    }
 
-.primary-btn:disabled {
-    background: #D1D5DB;
-    cursor: not-allowed;
-    box-shadow: none;
-}
+    .primary-btn:disabled {
+        background: #D1D5DB;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
 
-.primary-btn.selected {
-    outline: 2px solid #f59e0b;
-    outline-offset: 2px;
-}
+    .primary-btn.selected {
+        outline: 2px solid #f59e0b;
+        outline-offset: 2px;
+    }
 
 .secondary-btn {
     background: #D97706;
@@ -76,14 +75,27 @@ th, td {
     border-radius: 6px;
     cursor: pointer;
     font-family: inherit;
-    transition: background-color 0.2s;
     box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
 }
 
-.secondary-btn:hover {
-    background: #B45309;
-    box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3);
+    .secondary-btn:hover {
+        background: #B45309;
+        box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3);
+    }
+
+/* Button motion: hover shadow, selection outline and size changes ease instead of snapping */
+.primary-btn,
+.secondary-btn {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, outline-color 0.2s ease, padding 0.2s ease, font-size 0.2s ease, transform 0.1s ease;
 }
+
+    /* Press feedback */
+    .primary-btn:active:not(:disabled),
+    .secondary-btn:active:not(:disabled) {
+        transform: translateY(1px) scale(0.98);
+    }
 
 .lobby-card {
     width: 420px;
@@ -95,43 +107,43 @@ th, td {
     text-align: left;
 }
 
-.lobby-card h2 {
-     margin: 0 0 12px 0;
-     font-size: 32px;
-     font-weight: 700;
-     color: #e69026;
-}
+    .lobby-card h2 {
+        margin: 0 0 12px 0;
+        font-size: 32px;
+        font-weight: 700;
+        color: #e69026;
+    }
 
-.lobby-card p {
-    margin: 6px 0;
-    color: #e5e7eb;
-}
+    .lobby-card p {
+        margin: 6px 0;
+        color: #e5e7eb;
+    }
 
-.lobby-card ul {
-    margin: 6px 0 0 18px;
-    padding: 0;
-}
+    .lobby-card ul {
+        margin: 6px 0 0 18px;
+        padding: 0;
+    }
 
-.lobby-card li {
-    margin: 8px 0;
-    color: #d1d5db;
-    font-weight: 500;
-}
+    .lobby-card li {
+        margin: 8px 0;
+        color: #d1d5db;
+        font-weight: 500;
+    }
 
-.lobby-card h3 {
-     font-size: 26px;
-     color: #e69026;
-}
+    .lobby-card h3 {
+        font-size: 26px;
+        color: #e69026;
+    }
 
-.lobby-card pre {
-    background: #111827;
-    color: #c4c4c4;
-    padding: 12px;
-    border: 1px solid #374151;
-    border-radius: 8px;
-    overflow-x: auto;
-    margin-top: 20px;
-}
+    .lobby-card pre {
+        background: #111827;
+        color: #c4c4c4;
+        padding: 12px;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin-top: 20px;
+    }
 
 .code-snippet-section {
     border-top: 2px solid #d97706;
@@ -159,15 +171,15 @@ th, td {
     text-align: left;
 }
 
-/* Adds spacing below the Race Results heading */
-.race-results h2 {
-    margin-bottom: 16px;
-}
+    /* Adds spacing below the Race Results heading */
+    .race-results h2 {
+        margin-bottom: 16px;
+    }
 
-/* Adds spacing between Time, WPM, Accuracy, and Mistakes */
-.race-results p {
-    margin: 8px 0;
-}
+    /* Adds spacing between Time, WPM, Accuracy, and Mistakes */
+    .race-results p {
+        margin: 8px 0;
+    }
 
 /* Moves the Back to Lobby button lower and aligns it to the left */
 .back-to-lobby {
@@ -245,17 +257,18 @@ th, td {
     font-size: 18px;
     line-height: 1.6;
     resize: vertical;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.typing-input:focus {
-    outline: none;
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
-}
+    .typing-input:focus {
+        outline: none;
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+    }
 
-.typing-input::placeholder {
-    color: #6b7280;
-}
+    .typing-input::placeholder {
+        color: #6b7280;
+    }
 
 .typing-input-error {
     border-color: #ef4444;
@@ -329,6 +342,7 @@ th, td {
     font-size: 14px;
     font-weight: 600;
     text-align: left;
+    animation: fade-in 0.15s ease-out;
 }
 
 .results-screen {
@@ -338,4 +352,35 @@ th, td {
     justify-content: center;
     align-items: center;
     gap: 20px;
+}
+
+/* ---------- Motion ---------- */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Entrance for whatever a button press brings on screen */
+.screen-enter,
+.lobby-card,
+.typing-challenge,
+.code-snippet-section {
+    animation: fade-in 0.25s ease-out;
+}
+
+/* Respect the OS "reduce motion" setting. Near-zero durations (not "none") keep animation events firing */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0ms !important;
+    }
 }

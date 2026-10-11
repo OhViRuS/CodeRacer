@@ -1,10 +1,29 @@
+import { useEffect, useState } from 'react';
 import '../styles/Modal.css';
 
+const CLOSE_ANIMATION_MS = 200;
 function Modal({ isOpen, title, children, onClose }) {
-    if (!isOpen) return null;
+    const [mounted, setMounted] = useState(isOpen);
+
+    if (isOpen && !mounted) {
+        setMounted(true);
+    }
+
+    useEffect(() => {
+        if (isOpen || !mounted) {
+            return;
+        }
+
+        const timeoutId = setTimeout(() => setMounted(false), CLOSE_ANIMATION_MS);
+        return () => clearTimeout(timeoutId);
+    }, [isOpen, mounted]);
+
+    if (!mounted) {
+        return null;
+    }
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className={isOpen ? 'modal-overlay' : 'modal-overlay closing'} onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>{title}</h2>

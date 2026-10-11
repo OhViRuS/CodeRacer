@@ -90,7 +90,7 @@ function TypingChallenge({ language, onExit }) {
     }
     if (isCompleted) {
         return (
-            <div className="typing-challenge results-screen">
+            <div key="results" className="typing-challenge results-screen">
                 <h2 className="challenge-title">Race Complete</h2>
 
                 <RaceResults
@@ -142,7 +142,7 @@ function TypingChallenge({ language, onExit }) {
     }
 
     return (
-        <div className="typing-challenge">
+        <div key="challenge" className="typing-challenge">
             <h2 className="challenge-title">Typing Challenge</h2>
 
             <div className="code-area">
