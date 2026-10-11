@@ -1,9 +1,16 @@
 ﻿namespace CodeRacer.Server.Models
 {
-    public struct CharacterMistake
+    public readonly struct CharacterMistake
     {
-        public int PositionIndex { get; set; }
-        public char ExpectedCharacter { get; set; }
-        public char TypedCharacter { get; set; }
+        public int PositionIndex { get; }
+        public char ExpectedCharacter { get; }
+        public char TypedCharacter { get; }
+
+        public CharacterMistake(int positionIndex, char expectedCharacter, char typedCharacter)
+        {
+            PositionIndex = positionIndex;
+            ExpectedCharacter = expectedCharacter;
+            TypedCharacter = typedCharacter;
+        }
     }
 }
