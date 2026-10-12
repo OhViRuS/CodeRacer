@@ -3,6 +3,7 @@
 A change is "done" when all of the following are true:
 
 - [ ] It builds and runs locally (`dotnet build` and `npm run build` both succeed).
+- [ ] Code quality checks pass: run `dotnet format --verify-no-changes` from `CodeRacer.Server` and `npm run lint` from `coderacer.client`; fix all reported issues before opening or updating the pull request.
 - [ ] It has been reviewed and tested - manually at minimum, with an automated test where one makes sense.
 - [ ] It is merged to `main` via a pull request, not pushed directly.
 - [ ] It matches the pull request template's checklist.
