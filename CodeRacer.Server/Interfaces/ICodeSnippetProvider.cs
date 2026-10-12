@@ -1,5 +1,5 @@
-﻿using CodeRacer.Server.Models;
 using System.Collections.Generic;
+using CodeRacer.Server.Models;
 
 namespace CodeRacer.Server.Interfaces;
 
