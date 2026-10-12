@@ -23,12 +23,34 @@ function fetchCodeSnippet(language) {
         });
 }
 
+function fetchRaceResult(snippetId, finalText, elapsedSeconds, keystrokes) {
+    return fetch('/api/RaceSessions/result', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            snippetId,
+            elapsedSeconds,
+            finalText,
+            keystrokes
+        })
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to calculate race result');
+        }
+
+        return response.json();
+    });
+}
+
 function TypingChallenge({ language, onExit }) {
     const [snippet, setSnippet] = useState(null);
     const [typedText, setTypedText] = useState('');
     const [error, setError] = useState(null);
-    const [mistakes, setMistakes] = useState(0);
-    const [totalKeystrokes, setTotalKeystrokes] = useState(0);
+    const [keystrokes, setKeystrokes] = useState([]);
+    const [raceResult, setRaceResult] = useState(null);
+    const [resultLoading, setResultLoading] = useState(false);
     const [startTime, setStartTime] = useState(null);
     const [elapsedTime, setElapsedTime] = useState(0);
 
@@ -73,14 +95,6 @@ function TypingChallenge({ language, onExit }) {
         return () => clearInterval(interval);
     }, [startTime, isCompleted]);
 
-    const accuracy = totalKeystrokes === 0
-        ? 100
-        : Math.round(((totalKeystrokes - mistakes) / totalKeystrokes) * 100);
-
-    const wpm = elapsedTime > 0
-        ? Math.round((totalKeystrokes / 5) / (elapsedTime / 60))
-        : 0;
-
     if (error) {
         return <p>{error}</p>;
     }
@@ -89,15 +103,24 @@ function TypingChallenge({ language, onExit }) {
         return <p>Loading challenge...</p>;
     }
     if (isCompleted) {
+        if (resultLoading || !raceResult) {
+            return (
+                <div className="typing-challenge results-screen">
+                    <h2 className="challenge-title">Race Complete</h2>
+                    <p>Calculating results...</p>
+                </div>
+            );
+        }
+
         return (
             <div className="typing-challenge results-screen">
                 <h2 className="challenge-title">Race Complete</h2>
 
                 <RaceResults
-                    time={elapsedTime}
-                    wpm={wpm}
-                    accuracy={accuracy}
-                    mistakes={mistakes}
+                    time={raceResult.time}
+                    wpm={raceResult.wpm}
+                    accuracy={raceResult.accuracy}
+                    mistakes={raceResult.mistakes}
                 />
 
                 <button
@@ -120,22 +143,52 @@ function TypingChallenge({ language, onExit }) {
             setStartTime(currentStartTime);
         }
 
+        let updatedKeystrokes = keystrokes;
+
         if (newText.length > typedText.length) {
-            setTotalKeystrokes(count => count + 1);
+            const newAttempts = [];
 
-            const typedIndex = newText.length - 1;
-            const typedCharacter = newText[typedIndex];
-            const expectedCharacter = snippet.codeText[typedIndex];
-
-            if (typedCharacter !== expectedCharacter) {
-                setMistakes(count => count + 1);
+            for (
+                let position = typedText.length;
+                position < newText.length;
+                position++
+            ) {
+                newAttempts.push({
+                    position,
+                    character: newText[position]
+                });
             }
+
+            updatedKeystrokes = [
+                ...keystrokes,
+                ...newAttempts
+            ];
+
+            setKeystrokes(updatedKeystrokes);
         }
 
         if (newText === snippet.codeText && currentStartTime !== null) {
-            const elapsedSeconds = (Date.now() - currentStartTime) / 1000;
+            const elapsedSeconds =
+                (Date.now() - currentStartTime) / 1000;
 
             setElapsedTime(elapsedSeconds);
+            setResultLoading(true);
+
+            fetchRaceResult(
+                snippet.id,
+                newText,
+                elapsedSeconds,
+                updatedKeystrokes
+            )
+                .then(result => {
+                    setRaceResult(result);
+                })
+                .catch(error => {
+                    setError(error.message);
+                })
+                .finally(() => {
+                    setResultLoading(false);
+                });
         }
 
         setTypedText(newText);
@@ -200,6 +253,7 @@ function TypingChallenge({ language, onExit }) {
                     onPaste={event => event.preventDefault()}
                     placeholder="Start typing here..."
                     rows={6}
+                    maxLength={snippet.codeText.length}
                     disabled={isCompleted}
                     spellCheck={false}
                     autoCorrect="off"
@@ -209,40 +263,9 @@ function TypingChallenge({ language, onExit }) {
             </div>
 
             <p>
-                Mistakes: {mistakes}
-            </p>
-
-            <p>
-                Accuracy: {accuracy}%
-            </p>
-
-            <p>
-                WPM: {wpm}
-            </p>
-
-            <p>
                 Time: {elapsedTime.toFixed(1)} seconds
             </p>
 
-            {isCompleted && (
-                <>
-                    <RaceResults
-                        time={elapsedTime}
-                        wpm={wpm}
-                        accuracy={accuracy}
-                        mistakes={mistakes}
-                    />
-
-                    <div className="back-to-lobby">
-                        <button
-                            className="secondary-btn"
-                            onClick={onExit}
-                        >
-                            Back to Lobby
-                        </button>
-                    </div>
-                </>
-            )}
         </div>
     );
 }

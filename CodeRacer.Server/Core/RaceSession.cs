@@ -1,11 +1,9 @@
-using System.Diagnostics;
 using CodeRacer.Server.Models;
 
 namespace CodeRacer.Server.Core;
 
 public class RaceSession
 {
-    private readonly Stopwatch _stopwatch = new();
     private readonly List<CharacterMistake> _mistakes = new();
     private int _totalErrorsCount = 0;
     private readonly bool _enableDetailedTracking;
@@ -31,30 +29,26 @@ public class RaceSession
     public CodeSnippet Snippet { get; }
     public int CurrentPosition { get; private set; }
     public int TotalKeystrokes { get; private set; }
+    public int TotalErrorsCount => _totalErrorsCount;
     public IReadOnlyList<CharacterMistake> Mistakes => _mistakes;
     public bool IsCompleted => CurrentPosition >= Snippet.CodeText.Length;
 
-    public bool TypeCharacter(char typed)
+    public bool TypeCharacter(char typed, int position)
     {
-        if (IsCompleted)
+        if (position < 0 || position >= Snippet.CodeText.Length)
         {
             return false;
         }
 
-        if (!_stopwatch.IsRunning)
-        {
-            _stopwatch.Start();
-        }
-
         TotalKeystrokes++;
-        char expected = Snippet.CodeText[CurrentPosition];
+
+        char expected = Snippet.CodeText[position];
 
         if (typed == expected)
         {
-            CurrentPosition++;
-            if (IsCompleted)
+            if (position == CurrentPosition)
             {
-                _stopwatch.Stop();
+                CurrentPosition++;
             }
 
             return true;
@@ -66,27 +60,28 @@ public class RaceSession
         {
             _mistakes.Add(new CharacterMistake
             {
-                PositionIndex = CurrentPosition,
+                PositionIndex = position,
                 ExpectedCharacter = expected,
                 TypedCharacter = typed
             });
         }
+
         return false;
     }
 
-    public RaceResult GetResult(bool includeDetailedStats = false)
+    public RaceResult GetResult(TimeSpan elapsedTime)
     {
-        if (!IsCompleted)
+        if (elapsedTime < TimeSpan.Zero)
         {
-            throw new InvalidOperationException("Race is not completed yet.");
+            throw new ArgumentException(
+                "Elapsed time cannot be negative.",
+                nameof(elapsedTime));
         }
 
-        TimeSpan time = _stopwatch.Elapsed;
-
         double wpm;
-        if (time.TotalMinutes > 0)
+        if (elapsedTime.TotalMinutes > 0)
         {
-            wpm = (CurrentPosition / 5.0) / time.TotalMinutes;
+            wpm = (Snippet.CodeText.Length / 5.0) / elapsedTime.TotalMinutes;
         }
         else
         {
@@ -103,8 +98,9 @@ public class RaceSession
             accuracy = 100;
         }
 
-        // Optional detailed stats could be surfaced via a separate method or property if needed
-        // For now, the parameter enables future extensibility for additional calculations
-        return new RaceResult(time, wpm, accuracy);
+        return new RaceResult(elapsedTime, wpm, accuracy);
     }
 }
+
+
+

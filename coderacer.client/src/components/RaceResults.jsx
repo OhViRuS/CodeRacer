@@ -8,11 +8,11 @@ function RaceResults({ time, wpm, accuracy, mistakes }) {
             </p>
 
             <p>
-                <strong>WPM:</strong> {wpm}
+                <strong>WPM:</strong> {Math.round(wpm)}
             </p>
 
             <p>
-                <strong>Accuracy:</strong> {accuracy}%
+                <strong>Accuracy:</strong> {accuracy.toFixed(0)}%
             </p>
 
             <p>
