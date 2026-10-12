@@ -2,21 +2,18 @@ import { useState } from 'react';
 import '../styles/Modal.css';
 
 function Modal({ isOpen, title, children, onClose }) {
-    // Stay mounted after isOpen becomes false, until the closing animation in Modal.css has finished.
-    const [mounted, setMounted] = useState(isOpen);
+    // True once the closing animation in Modal.css has finished.
+    const [hidden, setHidden] = useState(!isOpen);
 
-    if (isOpen && !mounted) {
-        setMounted(true);
-    }
-
-    if (!mounted) {
+    // While isOpen is true the modal is always shown; after it turns false it stays until the fade-out ends.
+    if (!isOpen && hidden) {
         return null;
     }
 
     function handleAnimationEnd(event) {
         // Animations of child elements bubble up to the overlay, so only react to the overlay's own.
-        if (!isOpen && event.target === event.currentTarget) {
-            setMounted(false);
+        if (event.target === event.currentTarget) {
+            setHidden(!isOpen);
         }
     }
 

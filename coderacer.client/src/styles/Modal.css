@@ -13,7 +13,8 @@
     animation: overlay-in 0.2s ease-out;
 }
 
-    /* Set by Modal.jsx while the modal fades out; keep the duration below CLOSE_ANIMATION_MS in Modal.jsx */
+    /* Set by Modal.jsx while the modal fades out. Modal.jsx unmounts the modal when this overlay animation ends,
+       so the duration can be changed here without touching the JS. Keep this the longest closing animation. */
     .modal-overlay.closing {
         animation: overlay-out 0.18s ease-in forwards;
         pointer-events: none;
