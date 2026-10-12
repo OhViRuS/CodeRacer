@@ -1,29 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import '../styles/Modal.css';
 
-const CLOSE_ANIMATION_MS = 200;
 function Modal({ isOpen, title, children, onClose }) {
+    // Stay mounted after isOpen becomes false, until the closing animation in Modal.css has finished.
     const [mounted, setMounted] = useState(isOpen);
 
     if (isOpen && !mounted) {
         setMounted(true);
     }
 
-    useEffect(() => {
-        if (isOpen || !mounted) {
-            return;
-        }
-
-        const timeoutId = setTimeout(() => setMounted(false), CLOSE_ANIMATION_MS);
-        return () => clearTimeout(timeoutId);
-    }, [isOpen, mounted]);
-
     if (!mounted) {
         return null;
     }
 
+    function handleAnimationEnd(event) {
+        // Animations of child elements bubble up to the overlay, so only react to the overlay's own.
+        if (!isOpen && event.target === event.currentTarget) {
+            setMounted(false);
+        }
+    }
+
     return (
-        <div className={isOpen ? 'modal-overlay' : 'modal-overlay closing'} onClick={onClose}>
+        <div
+            className={isOpen ? 'modal-overlay' : 'modal-overlay closing'}
+            onClick={onClose}
+            onAnimationEnd={handleAnimationEnd}
+        >
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>{title}</h2>
