@@ -12,9 +12,12 @@ public record RaceResult(TimeSpan CompletionTime, double TypingSpeed, double Acc
         }
 
         var cmp = other.TypingSpeed.CompareTo(this.TypingSpeed);
-        if (cmp != 0) return cmp;
+        if (cmp != 0)
+        {
+            return cmp;
+        }
 
         return this.CompletionTime.CompareTo(other.CompletionTime);
-        }
     }
+}
 }
