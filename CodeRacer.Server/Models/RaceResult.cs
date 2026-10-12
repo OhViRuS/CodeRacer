@@ -8,10 +8,10 @@ namespace CodeRacer.Server.Models
         {
             if (other == null) return 1;
 
-        var cmp = other.TypingSpeed.CompareTo(this.TypingSpeed);
-        if (cmp != 0) return cmp;
+            var cmp = other.TypingSpeed.CompareTo(this.TypingSpeed);
+            if (cmp != 0) return cmp;
 
-        return this.CompletionTime.CompareTo(other.CompletionTime);
+            return this.CompletionTime.CompareTo(other.CompletionTime);
         }
     }
 }

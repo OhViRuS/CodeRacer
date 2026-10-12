@@ -51,10 +51,10 @@ public class RaceSession
 
         _totalErrorsCount++;
 
-            if (_enableDetailedTracking && _mistakes.Count < _maxMistakesToTrack)
-            {
-                _mistakes.Add(new CharacterMistake(CurrentPosition, expected, typed));
-            }
+        if (_enableDetailedTracking && _mistakes.Count < _maxMistakesToTrack)
+        {
+            _mistakes.Add(new CharacterMistake(CurrentPosition, expected, typed));
+        }
         return false;
     }
 
