@@ -64,12 +64,7 @@ public class RaceSession
 
         if (_enableDetailedTracking && _mistakes.Count < _maxMistakesToTrack)
         {
-            _mistakes.Add(new CharacterMistake
-            {
-                PositionIndex = CurrentPosition,
-                ExpectedCharacter = expected,
-                TypedCharacter = typed
-            });
+            _mistakes.Add(new CharacterMistake(CurrentPosition, expected, typed));
         }
         return false;
     }

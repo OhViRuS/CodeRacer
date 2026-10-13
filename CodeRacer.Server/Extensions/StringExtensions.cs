@@ -9,6 +9,10 @@ public static class StringExtensions
             return string.Empty;
         }
 
-        return input.Trim();
+        return input
+            .Replace("\r\n", "\n")
+            .Replace("\r", "\n")
+            .Replace("\t", "    ")
+            .Trim();
     }
 }
