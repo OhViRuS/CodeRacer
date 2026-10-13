@@ -42,6 +42,11 @@ public class RaceSessionsController : ControllerBase
                 attempt.Position);
         }
 
+        if (!session.IsCompleted)
+        {
+            return BadRequest("Keystrokes do not match the completed code snippet.");
+        }
+
         var result = session.GetResult(
             TimeSpan.FromSeconds(request.ElapsedSeconds));
 
