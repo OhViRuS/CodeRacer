@@ -86,7 +86,7 @@ function TypingChallenge({ language, onExit }) {
     }
 
     if (!snippet) {
-        return <p>Loading challenge...</p>;
+        return <p className="challenge-placeholder">Loading challenge...</p>;
     }
     if (isCompleted) {
         return (

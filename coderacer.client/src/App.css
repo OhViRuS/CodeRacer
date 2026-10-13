@@ -192,6 +192,19 @@ th, td {
     display: flex;
     gap: 16px;
     margin-top: 20px;
+    min-height: 44px;
+}
+
+.code-snippet-section.is-loading {
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+}
+
+/* Only show the placeholder if loading is slow, and keep its space so the page doesn't jump */
+.challenge-placeholder {
+    min-height: 640px;
+    opacity: 0;
+    animation: fade-in 0.25s ease-out 0.3s forwards;
 }
 
 .tagline {
