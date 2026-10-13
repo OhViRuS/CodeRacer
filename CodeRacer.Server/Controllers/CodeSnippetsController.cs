@@ -90,7 +90,7 @@ public class CodeSnippetsController : ControllerBase
         snippet.Id = snippet.Id == Guid.Empty ? Guid.NewGuid() : snippet.Id;
         try
         {
-            snippetProvider.AddSnippet(snippet: snippet, validateDuplicate: true);
+            snippetProvider.AddSnippet(validateDuplicate: true, snippet: snippet);
         }
         catch (DuplicateSnippetException ex)
         {
