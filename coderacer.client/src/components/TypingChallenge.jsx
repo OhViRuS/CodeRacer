@@ -95,6 +95,22 @@ function TypingChallenge({ language, onExit }) {
         return () => clearInterval(interval);
     }, [startTime, isCompleted]);
 
+    const liveMistakes = snippet
+        ? keystrokes.filter(
+            attempt => attempt.character !== snippet.codeText[attempt.position]
+        ).length
+        : 0;
+
+    const liveAccuracy = keystrokes.length === 0
+        ? 100
+        : Math.round(
+            ((keystrokes.length - liveMistakes) / keystrokes.length) * 100
+        );
+
+    const liveWpm = elapsedTime > 0
+        ? Math.round((correctCharacters / 5) / (elapsedTime / 60))
+        : 0;
+
     if (error) {
         return <p>{error}</p>;
     }
@@ -261,6 +277,18 @@ function TypingChallenge({ language, onExit }) {
                     autoComplete="off"
                 />
             </div>
+
+            <p>
+                Mistakes: {liveMistakes}
+            </p>
+
+            <p>
+                Accuracy: {liveAccuracy}%
+            </p>
+
+            <p>
+                WPM: {liveWpm}
+            </p>
 
             <p>
                 Time: {elapsedTime.toFixed(1)} seconds
