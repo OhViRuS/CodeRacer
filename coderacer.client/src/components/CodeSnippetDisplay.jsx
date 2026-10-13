@@ -75,7 +75,7 @@ function CodeSnippetDisplay({ onLanguageSelected }) {
     function startLoading() {
         setLoading(true);
         setError(null);
-        setSnippet(null);
+        // keep the previous snippet on screen while the next one loads, so the layout doesn't collapse
     }
 
     function handleLanguageChange(name) {
@@ -136,10 +136,6 @@ function CodeSnippetDisplay({ onLanguageSelected }) {
             return <p>Pick a language to get a code snippet.</p>;
         }
 
-        if (loading) {
-            return <p>Loading code snippet...</p>;
-        }
-
         if (error) {
             return (
                 <div>
@@ -150,11 +146,11 @@ function CodeSnippetDisplay({ onLanguageSelected }) {
         }
 
         if (!snippet) {
-            return null;
+            return loading ? <p>Loading code snippet...</p> : null;
         }
 
         return (
-            <div className="code-snippet-section">
+            <div className={loading ? 'code-snippet-section is-loading' : 'code-snippet-section'}>
                 <h2 className="snippet-title">Code Snippet</h2>
 
                 <p>

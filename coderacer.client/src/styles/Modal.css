@@ -10,7 +10,12 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    animation: overlay-in 0.2s ease-out;
 }
+
+    .modal-overlay.closing {
+        animation: overlay-out 0.18s ease-in forwards;
+    }
 
 /* Modal Content */
 .modal-content {
@@ -22,18 +27,54 @@
     max-width: 500px;
     max-height: 80vh;
     overflow-y: auto;
-    animation: slideIn 0.3s ease-out;
+    animation: modal-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-@keyframes slideIn {
+.modal-overlay.closing .modal-content {
+    animation: modal-out 0.18s ease-in forwards;
+}
+
+@keyframes overlay-in {
     from {
         opacity: 0;
-        transform: translateY(-50px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+    }
+}
+
+@keyframes overlay-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes modal-out {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
     }
 }
 
@@ -67,9 +108,9 @@
     transition: color 0.2s;
 }
 
-.modal-close:hover {
-    color: #f3f4f6;
-}
+    .modal-close:hover {
+        color: #f3f4f6;
+    }
 
 /* Modal Body */
 .modal-body {
@@ -86,6 +127,7 @@
     border-radius: 4px;
     margin-bottom: 15px;
     font-size: 14px;
+    animation: fade-in 0.2s ease-out;
 }
 
 /* Form Styles within Modal */
@@ -100,18 +142,19 @@
     box-sizing: border-box;
     background: #111827;
     color: #f9fafb;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.modal-body input:focus {
-    outline: none;
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18);
-    background: #111827;
-}
+    .modal-body input:focus {
+        outline: none;
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18);
+        background: #111827;
+    }
 
-.modal-body input::placeholder {
-    color: #9ca3af;
-}
+    .modal-body input::placeholder {
+        color: #9ca3af;
+    }
 
 /* Modal Actions */
 .modal-actions {
@@ -120,38 +163,42 @@
     margin-top: 20px;
 }
 
-.modal-actions button {
-    flex: 1;
-    padding: 10px 16px;
-    border-radius: 6px;
-    font-size: 16px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.2s;
-}
+    .modal-actions button {
+        flex: 1;
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-size: 16px;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+    }
 
-/* Primary Action */
-.modal-actions .btn-primary {
-    background-color: #d97706;
-    border: none;
-    color: white;
-    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
-}
+        .modal-actions button:active {
+            transform: translateY(1px) scale(0.98);
+        }
 
-.modal-actions .btn-primary:hover {
-    background-color: #b45309;
-    box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3);
-}
+    /* Primary Action */
+    .modal-actions .btn-primary {
+        background-color: #d97706;
+        border: none;
+        color: white;
+        box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
+    }
 
-/* Secondary Action */
-.modal-actions .btn-secondary {
-    background-color: #374151;
-    border: 1px solid #4b5563;
-    color: #e5e7eb;
-    font-weight: 500;
-}
+        .modal-actions .btn-primary:hover {
+            background-color: #b45309;
+            box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3);
+        }
 
-.modal-actions .btn-secondary:hover {
-    background-color: #4b5563;
-    border-color: #6b7280;
-}
+    /* Secondary Action */
+    .modal-actions .btn-secondary {
+        background-color: #374151;
+        border: 1px solid #4b5563;
+        color: #e5e7eb;
+        font-weight: 500;
+    }
+
+        .modal-actions .btn-secondary:hover {
+            background-color: #4b5563;
+            border-color: #6b7280;
+        }
