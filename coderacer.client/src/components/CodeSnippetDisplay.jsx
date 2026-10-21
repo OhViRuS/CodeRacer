@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react';
-import { fetchLanguages, fetchCodeSnippet } from '../api/codeSnippetsApi';
-
-// Enum names from the API -> labels shown on the buttons
-const LANGUAGE_LABELS = { CSharp: 'C#', Cpp: 'C++', Python: 'Python', JavaScript: 'JavaScript' };
+import { useState } from 'react';
+import LanguageSelector from './LanguageSelector';
+import useCodeSnippet from '../hooks/useCodeSnippet';
+import SnippetDisplay from './SnippetDisplay';
 
 function CodeSnippetDisplay({ onLanguageSelected }) {
-    const [languages, setLanguages] = useState([]);
-    const [languagesError, setLanguagesError] = useState(null);
     const [selectedLanguage, setSelectedLanguage] = useState(() => {
         try {
             return localStorage.getItem('language');
@@ -16,33 +13,11 @@ function CodeSnippetDisplay({ onLanguageSelected }) {
         }
     });
 
-    const [snippet, setSnippet] = useState(null);
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(selectedLanguage !== null);
-    const [retryCount, setRetryCount] = useState(0);
-
-    function getDifficultyName(difficulty) {
-        switch (difficulty) {
-            case 0:
-                return 'Easy';
-            case 1:
-                return 'Medium';
-            case 2:
-                return 'Hard';
-            default:
-                return 'Unknown';
-        }
-    }
-
-    function startLoading() {
-        setLoading(true);
-        setError(null);
-        // keep the previous snippet on screen while the next one loads, so the layout doesn't collapse
-    }
+    const { snippet, error, loading, retry, startLoading } = useCodeSnippet(selectedLanguage);
 
     function handleLanguageChange(name) {
         if (name === selectedLanguage) {
-            return; // same language: the effect won't re-run, so loading would get stuck
+            return;
         }
 
         startLoading();
@@ -57,97 +32,20 @@ function CodeSnippetDisplay({ onLanguageSelected }) {
         }
     }
 
-    function handleRetry() {
-        startLoading();
-        setRetryCount(count => count + 1);
-    }
-
-    // Load the list of available languages once.
-    useEffect(() => {
-        fetchLanguages()
-            .then(setLanguages)
-            .catch(e => setLanguagesError(e.message));
-    }, []);
-
-    // Load a snippet whenever the selected language changes (or on retry).
-    useEffect(() => {
-        if (!selectedLanguage) {
-            return;
-        }
-
-        let cancelled = false; // ignore stale responses if the language changes quickly
-
-        fetchCodeSnippet(selectedLanguage)
-            .then(data => {
-                if (!cancelled) setSnippet(data);
-            })
-            .catch(e => {
-                if (!cancelled) setError(e.message);
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedLanguage, retryCount]);
-
-    function renderSnippet() {
-        if (!selectedLanguage) {
-            return <p>Pick a language to get a code snippet.</p>;
-        }
-
-        if (error) {
-            return (
-                <div>
-                    <p>{error}</p>
-                    <button onClick={handleRetry}>Retry</button>
-                </div>
-            );
-        }
-
-        if (!snippet) {
-            return loading ? <p>Loading code snippet...</p> : null;
-        }
-
-        return (
-            <div className={loading ? 'code-snippet-section is-loading' : 'code-snippet-section'}>
-                <h2 className="snippet-title">Code Snippet</h2>
-
-                <p>
-                    <strong>Concept:</strong> {snippet.programmingConcept}
-                </p>
-
-                <p>
-                    <strong>Difficulty:</strong> {getDifficultyName(snippet.difficulty)}
-                </p>
-
-                <pre>{snippet.codeText}</pre>
-            </div>
-        );
-    }
-
     return (
         <div>
-            <h3>Select a programming language</h3>
+            <LanguageSelector
+                selectedLanguage={selectedLanguage}
+                onLanguageSelected={handleLanguageChange}
+            />
 
-            {languagesError && <p>{languagesError}</p>}
-
-            <div className="button-container">
-                {languages.map(name => (
-                    <button
-                        key={name}
-                        className={selectedLanguage === name ? 'primary-btn selected' : 'secondary-btn'}
-                        aria-pressed={selectedLanguage === name}
-                        onClick={() => handleLanguageChange(name)}
-                    >
-                        {LANGUAGE_LABELS[name] ?? name}
-                    </button>
-                ))}
-            </div>
-
-            {renderSnippet()}
+            <SnippetDisplay
+                selectedLanguage={selectedLanguage}
+                snippet={snippet}
+                error={error}
+                loading={loading}
+                onRetry={retry}
+            />
         </div>
     );
 }
