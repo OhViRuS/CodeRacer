@@ -1,22 +1,20 @@
 import { useState } from 'react';
+import { readStorage, writeStorage, removeStorage, STORAGE_KEYS } from '../utils/storage';
 
 function useLobby() {
     const [lobby, setLobby] = useState(() => {
         try {
-            const stored = localStorage.getItem('lobby');
-            return stored ? JSON.parse(stored) : null;
+            const storedLobby = readStorage(STORAGE_KEYS.LOBBY);
+
+            return storedLobby ? JSON.parse(storedLobby) : null;
         } catch (e) {
-            console.error('Failed to load lobby from localStorage', e);
+            console.error('Failed to parse lobby from localStorage', e);
             return null;
         }
     });
 
     function saveLobbyToStorage(newLobby) {
-        try {
-            localStorage.setItem('lobby', JSON.stringify(newLobby));
-        } catch (e) {
-            console.error('Failed to save lobby to localStorage', e);
-        }
+        writeStorage(STORAGE_KEYS.LOBBY, JSON.stringify(newLobby));
     }
 
     function createLobby(name) {
@@ -45,20 +43,10 @@ function useLobby() {
 
     function closeLobby() {
         setLobby(null);
-
-        try {
-            localStorage.removeItem('lobby');
-        } catch (e) {
-            console.error('Failed to remove lobby from localStorage', e);
-        }
+        removeStorage(STORAGE_KEYS.LOBBY);
     }
 
-    return {
-        lobby,
-        createLobby,
-        joinLobby,
-        closeLobby
-    };
+    return { lobby, createLobby, joinLobby, closeLobby };
 }
 
 export default useLobby;

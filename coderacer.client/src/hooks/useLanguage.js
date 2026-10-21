@@ -1,23 +1,14 @@
 import { useState } from 'react';
+import { readStorage, STORAGE_KEYS, writeStorage } from '../utils/storage';
 
 function useLanguage() {
-    const [selectedLanguage, setSelectedLanguage] = useState(() => {
-        try {
-            return localStorage.getItem('language');
-        } catch (e) {
-            console.error('Failed to load language from localStorage', e);
-            return null;
-        }
-    });
+    const [selectedLanguage, setSelectedLanguage] = useState(
+        () => readStorage(STORAGE_KEYS.LANGUAGE)
+    );
 
     function selectLanguage(language) {
         setSelectedLanguage(language);
-
-        try {
-            localStorage.setItem('language', language);
-        } catch (e) {
-            console.error('Failed to save language to localStorage', e);
-        }
+        writeStorage(STORAGE_KEYS.LANGUAGE, language);
     }
 
     return {
