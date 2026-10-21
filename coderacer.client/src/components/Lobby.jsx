@@ -4,6 +4,7 @@ import CreateLobbyModal from './CreateLobbyModal';
 import JoinLobbyModal from './JoinLobbyModal';
 import CloseLobbyModal from './CloseLobbyModal';
 import useLobby from '../hooks/useLobby';
+import useLanguage from '../hooks/useLanguage';
 
 function Lobby({ onStartGame }) {
     const {
@@ -13,14 +14,7 @@ function Lobby({ onStartGame }) {
         closeLobby
     } = useLobby();
 
-    const [selectedLanguage, setSelectedLanguage] = useState(() => {
-        try {
-            return localStorage.getItem('language');
-        } catch (e) {
-            console.error('Failed to load language from localStorage', e);
-            return null;
-        }
-    });
+    const { selectedLanguage, selectLanguage } = useLanguage();
 
     const [createLobbyModalOpen, setCreateLobbyModalOpen] = useState(false);
     const [joinLobbyModalOpen, setJoinLobbyModalOpen] = useState(false);
@@ -50,7 +44,8 @@ function Lobby({ onStartGame }) {
                 </ul>
 
                 <CodeSnippetDisplay
-                    onLanguageSelected={setSelectedLanguage}
+                    selectedLanguage={selectedLanguage}
+                    onLanguageSelected={selectLanguage}
                 />
 
                 <div className="lobby-actions">

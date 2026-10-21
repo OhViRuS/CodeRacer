@@ -1,18 +1,8 @@
-import { useState } from 'react';
 import LanguageSelector from './LanguageSelector';
 import useCodeSnippet from '../hooks/useCodeSnippet';
 import SnippetDisplay from './SnippetDisplay';
 
-function CodeSnippetDisplay({ onLanguageSelected }) {
-    const [selectedLanguage, setSelectedLanguage] = useState(() => {
-        try {
-            return localStorage.getItem('language');
-        } catch (e) {
-            console.error('Failed to load language from localStorage', e);
-            return null;
-        }
-    });
-
+function CodeSnippetDisplay({ selectedLanguage, onLanguageSelected }) {
     const { snippet, error, loading, retry, startLoading } = useCodeSnippet(selectedLanguage);
 
     function handleLanguageChange(name) {
@@ -21,15 +11,7 @@ function CodeSnippetDisplay({ onLanguageSelected }) {
         }
 
         startLoading();
-        // Notify the parent component about the selected language
-        setSelectedLanguage(name);
-        onLanguageSelected?.(name);
-
-        try {
-            localStorage.setItem('language', name);
-        } catch (e) {
-            console.error('Failed to save language to localStorage', e);
-        }
+        onLanguageSelected(name);
     }
 
     return (
