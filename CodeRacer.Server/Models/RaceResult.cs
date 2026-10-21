@@ -20,4 +20,3 @@ public record RaceResult(TimeSpan CompletionTime, double TypingSpeed, double Acc
         return this.CompletionTime.CompareTo(other.CompletionTime);
     }
 }
-}
