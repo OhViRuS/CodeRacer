@@ -7,20 +7,35 @@ using CodeRacer.Server.Exceptions;
 using CodeRacer.Server.Extensions;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 
 namespace CodeRacer.Server.Services;
 
+/// <summary>
+/// Provides code snippets loaded from and persisted to a JSON file.
+/// Relative paths are resolved against the content root path so mutations persist to the expected location.
+/// Writes use an atomic temporary-file swap, and disk saves occur before updating the memory cache.
+/// </summary>
 public class FileSnippetProvider : ICodeSnippetRepository
 {
     private readonly string _filePath;
-    private readonly object _loadLock = new();
-    private readonly object _modifyLock = new();
+    private readonly object _syncLock = new();
     private List<CodeSnippet>? _cachedSnippets;
 
-    public FileSnippetProvider(IConfiguration? configuration = null)
+    public FileSnippetProvider(IConfiguration? configuration = null, IWebHostEnvironment? environment = null)
     {
-        _filePath = configuration?["SnippetStorage:FilePath"] ?? "Data/snippets.json";
+        string configuredPath = configuration?["SnippetStorage:FilePath"] ?? "Data/snippets.json";
+
+        if (Path.IsPathRooted(configuredPath))
+        {
+            _filePath = configuredPath;
+        }
+        else
+        {
+            string basePath = environment?.ContentRootPath ?? AppContext.BaseDirectory;
+            _filePath = Path.Combine(basePath, configuredPath);
+        }
     }
 
     public FileSnippetProvider(string filePath)
@@ -77,7 +92,7 @@ public class FileSnippetProvider : ICodeSnippetRepository
             throw new ArgumentNullException(nameof(snippet));
         }
 
-        lock (_modifyLock)
+        lock (_syncLock)
         {
             EnsureLoaded();
 
@@ -93,8 +108,13 @@ public class FileSnippetProvider : ICodeSnippetRepository
                 snippet.Id = Guid.NewGuid();
             }
 
-            _cachedSnippets!.Add(snippet);
-            SaveSnippets();
+            var updatedList = new List<CodeSnippet>(_cachedSnippets!)
+            {
+                snippet
+            };
+
+            SaveSnippets(updatedList);
+            _cachedSnippets = updatedList;
         }
     }
 
@@ -105,28 +125,36 @@ public class FileSnippetProvider : ICodeSnippetRepository
             throw new ArgumentNullException(nameof(updatedSnippet));
         }
 
-        lock (_modifyLock)
+        lock (_syncLock)
         {
             EnsureLoaded();
-            var existing = _cachedSnippets!.FirstOrDefault(s => s.Id == id);
-            if (existing == null)
+            var existingIndex = _cachedSnippets!.FindIndex(s => s.Id == id);
+            if (existingIndex < 0)
             {
                 return false;
             }
 
-            existing.CodeText = updatedSnippet.CodeText.NormalizeSnippet();
-            existing.Language = updatedSnippet.Language;
-            existing.Difficulty = updatedSnippet.Difficulty;
-            existing.ProgrammingConcept = updatedSnippet.ProgrammingConcept;
+            var updated = new CodeSnippet
+            {
+                Id = id,
+                CodeText = updatedSnippet.CodeText.NormalizeSnippet(),
+                Language = updatedSnippet.Language,
+                Difficulty = updatedSnippet.Difficulty,
+                ProgrammingConcept = updatedSnippet.ProgrammingConcept
+            };
 
-            SaveSnippets();
+            var updatedList = new List<CodeSnippet>(_cachedSnippets!);
+            updatedList[existingIndex] = updated;
+
+            SaveSnippets(updatedList);
+            _cachedSnippets = updatedList;
             return true;
         }
     }
 
     public bool DeleteSnippet(Guid id)
     {
-        lock (_modifyLock)
+        lock (_syncLock)
         {
             EnsureLoaded();
             var existing = _cachedSnippets!.FirstOrDefault(s => s.Id == id);
@@ -135,24 +163,18 @@ public class FileSnippetProvider : ICodeSnippetRepository
                 return false;
             }
 
-            bool removed = _cachedSnippets!.Remove(existing);
-            if (removed)
-            {
-                SaveSnippets();
-            }
+            var updatedList = new List<CodeSnippet>(_cachedSnippets!);
+            updatedList.Remove(existing);
 
-            return removed;
+            SaveSnippets(updatedList);
+            _cachedSnippets = updatedList;
+            return true;
         }
     }
 
     private List<CodeSnippet> EnsureLoaded()
     {
-        if (_cachedSnippets != null)
-        {
-            return new List<CodeSnippet>(_cachedSnippets);
-        }
-
-        lock (_loadLock)
+        lock (_syncLock)
         {
             if (_cachedSnippets != null)
             {
@@ -191,19 +213,50 @@ public class FileSnippetProvider : ICodeSnippetRepository
         }
     }
 
-    private void SaveSnippets()
+    private void SaveSnippets(List<CodeSnippet> snippetsToSave)
     {
         var options = new JsonSerializerOptions
         {
             WriteIndented = true
         };
 
-        string jsonText = JsonSerializer.Serialize(_cachedSnippets, options);
+        string jsonText = JsonSerializer.Serialize(snippetsToSave, options);
 
-        using (FileStream fileStream = new FileStream(_filePath, FileMode.Create, FileAccess.Write))
-        using (StreamWriter writer = new StreamWriter(fileStream))
+        string directory = Path.GetDirectoryName(_filePath) ?? string.Empty;
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
         {
-            writer.Write(jsonText);
+            Directory.CreateDirectory(directory);
+        }
+
+        string tempFilePath = Path.Combine(
+            string.IsNullOrEmpty(directory) ? "." : directory,
+            $"{Path.GetFileName(_filePath)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            using (FileStream fileStream = new FileStream(tempFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (StreamWriter writer = new StreamWriter(fileStream))
+            {
+                writer.Write(jsonText);
+            }
+
+            File.Move(tempFilePath, _filePath, overwrite: true);
+        }
+        catch
+        {
+            if (File.Exists(tempFilePath))
+            {
+                try
+                {
+                    File.Delete(tempFilePath);
+                }
+                catch
+                {
+                    // Best-effort cleanup of temporary file on failure
+                }
+            }
+
+            throw;
         }
     }
 }
