@@ -7,7 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddSingleton<CodeRacer.Server.Interfaces.ICodeSnippetProvider, CodeRacer.Server.Services.FileSnippetProvider>();
+builder.Services.AddSingleton<FileSnippetProvider>();
+builder.Services.AddSingleton<ICodeSnippetRepository>(sp => sp.GetRequiredService<FileSnippetProvider>());
+builder.Services.AddSingleton<ICodeSnippetProvider>(sp => sp.GetRequiredService<FileSnippetProvider>());
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -15,7 +18,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var provider = scope.ServiceProvider.GetRequiredService<CodeRacer.Server.Interfaces.ICodeSnippetProvider>();
+    var provider = scope.ServiceProvider.GetRequiredService<ICodeSnippetProvider>();
     provider.GetSnippets();
 }
 
