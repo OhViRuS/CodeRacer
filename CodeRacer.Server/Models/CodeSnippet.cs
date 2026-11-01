@@ -15,4 +15,6 @@ public class CodeSnippet
 
     [Required]
     public string ProgrammingConcept { get; set; } = string.Empty;
+
+    public ICollection<RaceResult> RaceResults { get; set; } = new List<RaceResult>();
 }
