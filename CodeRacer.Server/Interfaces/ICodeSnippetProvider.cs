@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CodeRacer.Server.Models;
 
@@ -5,11 +6,9 @@ namespace CodeRacer.Server.Interfaces;
 
 public interface ICodeSnippetProvider
 {
-    List<CodeSnippet> GetSnippets(string filePath = "Data/snippets.json");
+    IReadOnlyList<CodeSnippet> GetSnippets(ProgrammingLanguage? language = null);
 
-    void AddSnippet(CodeSnippet snippet, bool validateDuplicate = true);
+    CodeSnippet? GetById(Guid id);
 
-    bool UpdateSnippet(Guid id, CodeSnippet updatedSnippet);
-
-    bool DeleteSnippet(Guid id);
+    CodeSnippet? GetRandom(ProgrammingLanguage? language = null, Difficulty? difficulty = null);
 }

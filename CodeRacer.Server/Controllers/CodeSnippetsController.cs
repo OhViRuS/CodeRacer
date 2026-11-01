@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using CodeRacer.Server.Exceptions;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
@@ -12,22 +11,20 @@ namespace CodeRacer.Server.Controllers;
 [Route("api/[controller]")]
 public class CodeSnippetsController : ControllerBase
 {
+    private readonly ICodeSnippetRepository _snippetRepository;
+
+    public CodeSnippetsController(ICodeSnippetRepository snippetRepository)
+    {
+        _snippetRepository = snippetRepository ?? throw new ArgumentNullException(nameof(snippetRepository));
+    }
 
     // GET: /api/codesnippets
     // GET: /api/codesnippets?language=Python
     [HttpGet]
-    public ActionResult<IEnumerable<CodeSnippet>> GetAll(
-        [FromServices] ICodeSnippetProvider snippetProvider,
-        [FromQuery] ProgrammingLanguage? language = null)
+    public ActionResult<IEnumerable<CodeSnippet>> GetAll([FromQuery] ProgrammingLanguage? language = null)
     {
-        IEnumerable<CodeSnippet> snippets = snippetProvider.GetSnippets(filePath: "Data/snippets.json");
-
-        if (language is not null)
-        {
-            snippets = snippets.Where(s => s.Language == language);
-        }
-
-        return Ok(snippets.ToList());
+        var snippets = _snippetRepository.GetSnippets(language: language);
+        return Ok(snippets);
     }
 
     // GET: /api/codesnippets/languages
@@ -39,9 +36,9 @@ public class CodeSnippetsController : ControllerBase
 
     // GET: /api/codesnippets/{id}
     [HttpGet("{id:guid}")]
-    public ActionResult<CodeSnippet> GetById(Guid id, [FromServices] ICodeSnippetProvider snippetProvider)
+    public ActionResult<CodeSnippet> GetById(Guid id)
     {
-        var snippet = snippetProvider.GetSnippets(filePath: "Data/snippets.json").FirstOrDefault(s => s.Id == id);
+        var snippet = _snippetRepository.GetById(id);
         if (snippet == null)
         {
             return NotFound();
@@ -53,34 +50,21 @@ public class CodeSnippetsController : ControllerBase
     // GET: /api/codesnippets/random?language=Python&difficulty=Easy
     [HttpGet("random")]
     public ActionResult<CodeSnippet> GetRandom(
-        [FromServices] ICodeSnippetProvider snippetProvider,
         [FromQuery] ProgrammingLanguage? language = null,
         [FromQuery] Difficulty? difficulty = null)
     {
-        IEnumerable<CodeSnippet> snippets = snippetProvider.GetSnippets();
-        if (language is not null)
-        {
-            snippets = snippets.Where(s => s.Language == language);
-        }
-        if (difficulty is not null)
-        {
-            snippets = snippets.Where(s => s.Difficulty == difficulty);
-        }
-        var snippetList = snippets.ToList();
-
-        if (snippetList.Count == 0)
+        var randomSnippet = _snippetRepository.GetRandom(language: language, difficulty: difficulty);
+        if (randomSnippet == null)
         {
             return NotFound();
         }
 
-        int index = Random.Shared.Next(0, snippetList.Count);
-        var randomSnippet = snippetList[index];
         return Ok(randomSnippet);
     }
 
     // POST: /api/codesnippets
     [HttpPost]
-    public ActionResult<CodeSnippet> Create([FromBody] CodeSnippet snippet, [FromServices] ICodeSnippetProvider snippetProvider)
+    public ActionResult<CodeSnippet> Create([FromBody] CodeSnippet snippet)
     {
         if (snippet == null)
         {
@@ -90,7 +74,7 @@ public class CodeSnippetsController : ControllerBase
         snippet.Id = snippet.Id == Guid.Empty ? Guid.NewGuid() : snippet.Id;
         try
         {
-            snippetProvider.AddSnippet(validateDuplicate: true, snippet: snippet);
+            _snippetRepository.AddSnippet(validateDuplicate: true, snippet: snippet);
         }
         catch (DuplicateSnippetException ex)
         {
@@ -106,7 +90,7 @@ public class CodeSnippetsController : ControllerBase
 
     // PUT: /api/codesnippets/{id}
     [HttpPut("{id:guid}")]
-    public IActionResult Update(Guid id, [FromBody] CodeSnippet updatedSnippet, [FromServices] ICodeSnippetProvider snippetProvider)
+    public IActionResult Update(Guid id, [FromBody] CodeSnippet updatedSnippet)
     {
         if (updatedSnippet == null)
         {
@@ -118,7 +102,7 @@ public class CodeSnippetsController : ControllerBase
             return BadRequest("Route id does not match snippet id.");
         }
 
-        var updated = snippetProvider.UpdateSnippet(id, updatedSnippet);
+        var updated = _snippetRepository.UpdateSnippet(id, updatedSnippet);
         if (!updated)
         {
             return NotFound();
@@ -129,9 +113,9 @@ public class CodeSnippetsController : ControllerBase
 
     // DELETE: /api/codesnippets/{id}
     [HttpDelete("{id:guid}")]
-    public IActionResult Delete(Guid id, [FromServices] ICodeSnippetProvider snippetProvider)
+    public IActionResult Delete(Guid id)
     {
-        var removed = snippetProvider.DeleteSnippet(id);
+        var removed = _snippetRepository.DeleteSnippet(id);
         if (!removed)
         {
             return NotFound();
@@ -139,5 +123,4 @@ public class CodeSnippetsController : ControllerBase
 
         return NoContent();
     }
-
 }
