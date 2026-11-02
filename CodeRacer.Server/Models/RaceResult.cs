@@ -1,6 +1,6 @@
 namespace CodeRacer.Server.Models;
 
-public class RaceResult : IComparable<RaceResult>
+public record RaceResult : IComparable<RaceResult>
 {
     public RaceResult()
     {
