@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CodeRacer.Server.Models;
 
 public record RaceResult : IComparable<RaceResult>
@@ -22,7 +24,10 @@ public record RaceResult : IComparable<RaceResult>
     public int Mistakes { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    [JsonIgnore]
     public User? User { get; set; }
+
+    [JsonIgnore]
     public CodeSnippet? CodeSnippet { get; set; }
 
     public int CompareTo(RaceResult? other)
