@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace CodeRacer.Server.Models;
 
@@ -15,4 +16,7 @@ public class CodeSnippet
 
     [Required]
     public string ProgrammingConcept { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public ICollection<RaceResult> RaceResults { get; set; } = new List<RaceResult>();
 }

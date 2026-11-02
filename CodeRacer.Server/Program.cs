@@ -1,11 +1,16 @@
+using CodeRacer.Server.Data;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+builder.Services.AddDbContext<CodeRacerDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("CodeRacer")));
 
 builder.Services.AddSingleton<FileSnippetProvider>();
 builder.Services.AddSingleton<ICodeSnippetRepository>(sp => sp.GetRequiredService<FileSnippetProvider>());
