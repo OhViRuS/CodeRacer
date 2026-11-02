@@ -4,4 +4,5 @@
     <Deploy />
   </Project>
   <Project Path="CodeRacer.Server/CodeRacer.Server.csproj" />
+  <Project Path="CodeRacer.Server.Tests/CodeRacer.Server.Tests.csproj" />
 </Solution>

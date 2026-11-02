@@ -1,0 +1,15 @@
+.import-card {
+    margin-top: 24px;
+}
+
+.import-card h3 {
+    margin-top: 0;
+}
+
+.import-card .secondary-btn {
+    margin-top: 10px;
+}
+
+.import-error {
+    color: #f87171;
+}
