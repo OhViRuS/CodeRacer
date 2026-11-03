@@ -23,6 +23,9 @@ public class SourceFileImporter : ISourceFileImporter
     private const long BytesPerMegabyte = 1024 * 1024;
     private const int BufferSize = 81920;
 
+    // Both separators are handled explicitly: on Linux Path.GetFileName does not treat '\' as a separator.
+    private static readonly char[] _pathSeparators = ['/', '\\'];
+
     private static readonly Dictionary<string, ProgrammingLanguage> _supportedExtensions =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -47,8 +50,14 @@ public class SourceFileImporter : ISourceFileImporter
             throw new ImportedFileException(ImportFailureReason.NoFile, "No file was provided.");
         }
 
-        // Only the file name is kept; any client-supplied path is discarded.
-        string safeName = Path.GetFileName(fileName);
+        // Only the file name is kept; any client-supplied path (Windows or Unix style) is discarded.
+        string safeName = GetSafeFileName(fileName);
+
+        if (safeName.Length == 0)
+        {
+            throw new ImportedFileException(ImportFailureReason.NoFile, "No file was provided.");
+        }
+
         string extension = Path.GetExtension(safeName);
 
         if (!_supportedExtensions.TryGetValue(extension, out ProgrammingLanguage language))
@@ -69,6 +78,13 @@ public class SourceFileImporter : ISourceFileImporter
         }
 
         return new ImportedSourceFile(safeName, language, code);
+    }
+
+    private static string GetSafeFileName(string fileName)
+    {
+        int lastSeparator = fileName.LastIndexOfAny(_pathSeparators);
+
+        return lastSeparator >= 0 ? fileName[(lastSeparator + 1)..] : fileName;
     }
 
     private static async Task<byte[]> ReadWithLimitAsync(Stream content, CancellationToken cancellationToken)

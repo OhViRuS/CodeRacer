@@ -113,12 +113,28 @@ public class SourceFileImporterTests
         Assert.Equal("if x:\n    print(x)", result.Content);
     }
 
-    [Fact]
-    public async Task ImportAsync_ClientSuppliedPath_IsDiscarded()
+    [Theory]
+    [InlineData("../../secret/evil.py")]
+    [InlineData("/etc/secret/evil.py")]
+    [InlineData("C:\\fakepath\\evil.py")]
+    [InlineData("..\\..\\secret\\evil.py")]
+    [InlineData("folder/sub\\evil.py")]
+    public async Task ImportAsync_ClientSuppliedPath_IsDiscarded(string fileName)
     {
-        ImportedSourceFile result = await _importer.ImportAsync("../../secret/evil.py", ToStream("x = 1"));
+        ImportedSourceFile result = await _importer.ImportAsync(fileName, ToStream("x = 1"));
 
         Assert.Equal("evil.py", result.FileName);
+    }
+
+    [Theory]
+    [InlineData("folder/")]
+    [InlineData("C:\\folder\\")]
+    public async Task ImportAsync_NameEndingWithSeparator_Throws(string fileName)
+    {
+        var ex = await Assert.ThrowsAsync<ImportedFileException>(
+            () => _importer.ImportAsync(fileName, ToStream("x = 1")));
+
+        Assert.Equal(ImportFailureReason.NoFile, ex.Reason);
     }
 
     private static MemoryStream ToStream(string text)
