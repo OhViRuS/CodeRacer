@@ -3,6 +3,7 @@ import CodeSnippetDisplay from './CodeSnippetDisplay';
 import CreateLobbyModal from './CreateLobbyModal';
 import JoinLobbyModal from './JoinLobbyModal';
 import CloseLobbyModal from './CloseLobbyModal';
+import SourceFileImport from './SourceFileImport';
 import useLobby from '../hooks/useLobby';
 import useLanguage from '../hooks/useLanguage';
 
@@ -22,55 +23,59 @@ function Lobby({ onStartGame }) {
 
     if (lobby) {
         return (
-            <div key="lobby" className="lobby-card">
-                <h2>Lobby</h2>
+            <>
+                <div key="lobby" className="lobby-card">
+                    <h2>Lobby</h2>
 
-                <p>
-                    <strong>ID:</strong> {lobby.id}
-                </p>
+                    <p>
+                        <strong>ID:</strong> {lobby.id}
+                    </p>
 
-                <p>
-                    <strong>Host:</strong> {lobby.host}
-                </p>
+                    <p>
+                        <strong>Host:</strong> {lobby.host}
+                    </p>
 
-                <p>
-                    <strong>Players:</strong>
-                </p>
+                    <p>
+                        <strong>Players:</strong>
+                    </p>
 
-                <ul>
-                    {lobby.players.map((player, index) => (
-                        <li key={index}>{player}</li>
-                    ))}
-                </ul>
+                    <ul>
+                        {lobby.players.map((player, index) => (
+                            <li key={index}>{player}</li>
+                        ))}
+                    </ul>
 
-                <CodeSnippetDisplay
-                    selectedLanguage={selectedLanguage}
-                    onLanguageSelected={selectLanguage}
-                />
+                    <CodeSnippetDisplay
+                        selectedLanguage={selectedLanguage}
+                        onLanguageSelected={selectLanguage}
+                    />
 
-                <div className="lobby-actions">
-                    <button
-                        className="secondary-btn"
-                        onClick={() => setCloseLobbyModalOpen(true)}
-                    >
-                        Close Lobby
-                    </button>
+                    <div className="lobby-actions">
+                        <button
+                            className="secondary-btn"
+                            onClick={() => setCloseLobbyModalOpen(true)}
+                        >
+                            Close Lobby
+                        </button>
 
-                    <button
-                        className="primary-btn"
-                        onClick={() => onStartGame(selectedLanguage)}
-                        disabled={!selectedLanguage}
-                    >
-                        Start Game
-                    </button>
+                        <button
+                            className="primary-btn"
+                            onClick={() => onStartGame(selectedLanguage)}
+                            disabled={!selectedLanguage}
+                        >
+                            Start Game
+                        </button>
+                    </div>
+
+                    <CloseLobbyModal
+                        isOpen={closeLobbyModalOpen}
+                        onClose={() => setCloseLobbyModalOpen(false)}
+                        onConfirm={closeLobby}
+                    />
                 </div>
 
-                <CloseLobbyModal
-                    isOpen={closeLobbyModalOpen}
-                    onClose={() => setCloseLobbyModalOpen(false)}
-                    onConfirm={closeLobby}
-                />
-            </div>
+                <SourceFileImport />
+            </>
         );
     }
 

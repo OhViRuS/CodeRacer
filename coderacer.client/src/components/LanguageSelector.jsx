@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchLanguages } from '../api/codeSnippetsApi';
-
-// Enum names from the API -> labels shown on the buttons
-const LANGUAGE_LABELS = { CSharp: 'C#', Cpp: 'C++', Python: 'Python', JavaScript: 'JavaScript' };
+import { LANGUAGE_LABELS } from '../utils/languageLabels';
 
 function LanguageSelector({ selectedLanguage, onLanguageSelected }) {
     const [languages, setLanguages] = useState([]);
