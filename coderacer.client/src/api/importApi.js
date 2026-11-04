@@ -1,4 +1,4 @@
-// The supported extensions and the maximum size are defined only on the server (SourceFileImporter).
+//  The supported extensions and the maximum size are defined only on the server (SourceFileImporter).
 export function fetchImportRules() {
     return fetch('/api/import/rules')
         .then(response => {
