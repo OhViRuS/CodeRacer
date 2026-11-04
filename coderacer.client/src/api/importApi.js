@@ -1,21 +1,33 @@
-// Keep in sync with SourceFileImporter on the server.
-export const SUPPORTED_EXTENSIONS = ['.cs', '.cpp', '.py', '.js'];
-export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+// The supported extensions and the maximum size are defined only on the server (SourceFileImporter).
+export function fetchImportRules() {
+    return fetch('/api/import/rules')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load import rules');
+            }
+
+            return response.json();
+        });
+}
+
+export function formatMegabytes(bytes) {
+    return `${bytes / (1024 * 1024)} MB`;
+}
 
 // Returns an error message, or null when the file can be sent to the server.
-export function validateSourceFile(file) {
+export function validateSourceFile(file, rules) {
     const name = file.name.toLowerCase();
 
-    if (!SUPPORTED_EXTENSIONS.some(extension => name.endsWith(extension))) {
-        return `Unsupported file type. Supported: ${SUPPORTED_EXTENSIONS.join(', ')}`;
+    if (!rules.supportedExtensions.some(extension => name.endsWith(extension))) {
+        return `Unsupported file type. Supported: ${rules.supportedExtensions.join(', ')}`;
     }
 
     if (file.size === 0) {
         return 'The file is empty.';
     }
 
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-        return 'The file is larger than 5 MB.';
+    if (file.size > rules.maxFileSizeBytes) {
+        return `The file is larger than ${formatMegabytes(rules.maxFileSizeBytes)}.`;
     }
 
     return null;
@@ -32,7 +44,7 @@ export function importSourceFile(file) {
             }
 
             if (response.status === 413) {
-                throw new Error('The file is larger than 5 MB.');
+                throw new Error('The file is too large.');
             }
 
             return response.json()

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ using CodeRacer.Server.Models;
 namespace CodeRacer.Server.Services;
 
 /// <summary>
-/// Accepts source code files with a supported extension (.cs, .cpp, .py, .js) up to 5 MB.
+/// Accepts source code files with a supported extension, up to the maximum size, both listed in <see cref="Rules"/>.
 /// The size limit is enforced while reading, so it does not rely on a client-declared length.
 /// Content must be valid UTF-8 text.
 /// </summary>
@@ -37,6 +38,8 @@ public class SourceFileImporter : ISourceFileImporter
 
     private static readonly UTF8Encoding _strictUtf8 =
         new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
+    public ImportRules Rules { get; } = new(_supportedExtensions.Keys.ToArray(), MaxFileSizeBytes);
 
     public async Task<ImportedSourceFile> ImportAsync(
         string? fileName,

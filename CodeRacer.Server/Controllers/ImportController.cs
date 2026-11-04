@@ -25,6 +25,13 @@ public class ImportController : ControllerBase
         _importer = importer ?? throw new ArgumentNullException(nameof(importer));
     }
 
+    // GET: /api/import/rules   (supported extensions and maximum file size)
+    [HttpGet("rules")]
+    public ActionResult<ImportRules> GetRules()
+    {
+        return Ok(_importer.Rules);
+    }
+
     // POST: /api/import   (multipart/form-data with a single field named "file")
     [HttpPost]
     [Consumes("multipart/form-data")]

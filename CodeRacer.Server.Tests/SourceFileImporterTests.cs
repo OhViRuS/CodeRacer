@@ -50,6 +50,19 @@ public class SourceFileImporterTests
     }
 
     [Fact]
+    public void Rules_ExposeSupportedExtensionsAndMaxSize()
+    {
+        ImportRules rules = _importer.Rules;
+
+        Assert.Equal(SourceFileImporter.MaxFileSizeBytes, rules.MaxFileSizeBytes);
+        Assert.Equal(4, rules.SupportedExtensions.Count);
+        Assert.Contains(".cs", rules.SupportedExtensions);
+        Assert.Contains(".cpp", rules.SupportedExtensions);
+        Assert.Contains(".py", rules.SupportedExtensions);
+        Assert.Contains(".js", rules.SupportedExtensions);
+    }
+
+    [Fact]
     public async Task ImportAsync_FileExactlyAtLimit_IsAccepted()
     {
         using var stream = new MemoryStream(Filled((int)SourceFileImporter.MaxFileSizeBytes));

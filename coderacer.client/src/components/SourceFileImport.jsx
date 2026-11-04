@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { SUPPORTED_EXTENSIONS, importSourceFile, validateSourceFile } from '../api/importApi';
+import { useEffect, useRef, useState } from 'react';
+import { fetchImportRules, formatMegabytes, importSourceFile, validateSourceFile } from '../api/importApi';
 import { LANGUAGE_LABELS } from '../utils/languageLabels';
 import '../styles/SourceFileImport.css';
 
@@ -10,6 +10,15 @@ function SourceFileImport() {
     const [imported, setImported] = useState(null);
     const [error, setError] = useState(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [rules, setRules] = useState(null);
+    const [rulesError, setRulesError] = useState(null);
+
+    // The supported extensions and the size limit come from the server.
+    useEffect(() => {
+        fetchImportRules()
+            .then(setRules)
+            .catch(e => setRulesError(e.message));
+    }, []);
 
     function handleFileChange(event) {
         const input = event.target;
@@ -22,7 +31,7 @@ function SourceFileImport() {
             return;
         }
 
-        const validationError = validateSourceFile(file);
+        const validationError = validateSourceFile(file, rules);
         if (validationError) {
             setImported(null);
             setError(validationError);
@@ -48,13 +57,15 @@ function SourceFileImport() {
             <h3>Import your own code</h3>
 
             <p>
-                Supported: {SUPPORTED_EXTENSIONS.join(', ')} (max 5 MB)
+                {rules
+                    ? `Supported: ${rules.supportedExtensions.join(', ')} (max ${formatMegabytes(rules.maxFileSizeBytes)})`
+                    : rulesError ?? 'Loading import rules...'}
             </p>
 
             <input
                 ref={inputRef}
                 type="file"
-                accept={SUPPORTED_EXTENSIONS.join(',')}
+                accept={rules?.supportedExtensions.join(',')}
                 onChange={handleFileChange}
                 hidden
             />
@@ -62,7 +73,7 @@ function SourceFileImport() {
             <button
                 className="secondary-btn"
                 onClick={() => inputRef.current.click()}
-                disabled={isImporting}
+                disabled={isImporting || !rules}
             >
                 {isImporting ? 'Importing...' : 'Choose file'}
             </button>
