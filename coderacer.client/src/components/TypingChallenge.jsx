@@ -3,19 +3,33 @@ import RaceResults from './RaceResults';
 import { fetchCodeSnippet } from '../api/codeSnippetsApi';
 import useTypingChallenge from '../hooks/useTypingChallenge';
 
-function TypingChallenge({ language, onExit }) {
-    const [snippet, setSnippet] = useState(null);
+function TypingChallenge({
+    language,
+    importedSnippet,
+    hasNextSnippet,
+    onNextSnippet,
+    onExit
+}) {
+    const [fetchedSnippet, setFetchedSnippet] = useState(null);
     const [error, setError] = useState(null);
 
+    const snippet = importedSnippet
+        ? { codeText: importedSnippet.code }
+        : fetchedSnippet;
+
     useEffect(() => {
+        if (importedSnippet) {
+            return;
+        }
+
         fetchCodeSnippet(language)
             .then(data => {
-                setSnippet(data);
+                setFetchedSnippet(data);
             })
             .catch(error => {
                 setError(error.message);
             });
-    }, [language]);
+    }, [language, importedSnippet]);
 
     const {
         typedText,
@@ -26,8 +40,14 @@ function TypingChallenge({ language, onExit }) {
         isCorrectSoFar,
         isCompleted,
         correctCharacters,
-        handleTyping
+        handleTyping,
+        resetChallenge
     } = useTypingChallenge(snippet);
+
+    function handleNextSnippet() {
+        resetChallenge();
+        onNextSnippet();
+    }
 
     if (error) {
         return <p>{error}</p>;
@@ -48,12 +68,21 @@ function TypingChallenge({ language, onExit }) {
                     mistakes={mistakes}
                 />
 
-                <button
-                    className="primary-btn"
-                    onClick={onExit}
-                >
-                    Back to Lobby
-                </button>
+                {importedSnippet && hasNextSnippet ? (
+                    <button
+                        className="primary-btn"
+                        onClick={handleNextSnippet}
+                    >
+                        Next Snippet
+                    </button>
+                ) : (
+                    <button
+                        className="primary-btn"
+                        onClick={onExit}
+                    >
+                        Back to Lobby
+                    </button>
+                )}
             </div>
         );
     }

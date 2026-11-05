@@ -5,6 +5,24 @@ import Lobby from './components/Lobby';
 
 function App() {
     const [gameLanguage, setGameLanguage] = useState(null);
+    const [importedSnippets, setImportedSnippets] = useState([]);
+    const [currentSnippetIndex, setCurrentSnippetIndex] = useState(0);
+
+    function handleStartImportedChallenge(language, snippets) {
+        setImportedSnippets(snippets);
+        setCurrentSnippetIndex(0);
+        setGameLanguage(language);
+    }
+
+    function handleNextSnippet() {
+        setCurrentSnippetIndex(index => index + 1);
+    }
+
+    const importedSnippet =
+        importedSnippets[currentSnippetIndex] ?? null;
+    const hasNextSnippet =
+        importedSnippets.length > 0 &&
+        currentSnippetIndex < importedSnippets.length - 1;
 
     if (gameLanguage) {
         return (
@@ -13,7 +31,14 @@ function App() {
 
                 <TypingChallenge
                     language={gameLanguage}
-                    onExit={() => setGameLanguage(null)}
+                    importedSnippet={importedSnippet}
+                    hasNextSnippet={hasNextSnippet}
+                    onNextSnippet={handleNextSnippet}
+                    onExit={() => {
+                        setGameLanguage(null);
+                        setImportedSnippets([]);
+                        setCurrentSnippetIndex(0);
+                    }}
                 />
             </div>
         );
@@ -32,7 +57,10 @@ function App() {
                 and race against other programmers.
             </p>
 
-            <Lobby onStartGame={setGameLanguage} />
+            <Lobby
+                onStartGame={setGameLanguage}
+                onStartImportedChallenge={handleStartImportedChallenge}
+            />
         </div>
     );
 }

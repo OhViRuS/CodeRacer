@@ -5,7 +5,7 @@ import '../styles/SourceFileImport.css';
 
 const PREVIEW_LINES = 10;
 
-function SourceFileImport() {
+function SourceFileImport({ onStartChallenge }) {
     const inputRef = useRef(null);
     const [imported, setImported] = useState(null);
     const [error, setError] = useState(null);
@@ -51,6 +51,8 @@ function SourceFileImport() {
     }
 
     const lines = imported ? imported.content.split('\n') : [];
+    const snippets = imported?.snippets ?? [];
+    const currentSnippet = snippets[0] ?? null;
 
     return (
         <div className="lobby-card import-card">
@@ -94,6 +96,29 @@ function SourceFileImport() {
                         {lines.slice(0, PREVIEW_LINES).join('\n')}
                         {lines.length > PREVIEW_LINES ? '\n...' : ''}
                     </pre>
+
+                    <h4>Extracted snippets ({snippets.length})</h4>
+
+                    {currentSnippet ? (
+                        <>
+                            <p>
+                                <strong>
+                                    First snippet of {snippets.length}
+                                </strong>
+                            </p>
+
+                            <pre>{currentSnippet.code}</pre>
+
+                            <button
+                                className="primary-btn"
+                                onClick={() => onStartChallenge(imported.language, snippets)}
+                            >
+                                Start Challenge
+                            </button>
+                        </>
+                    ) : (
+                        <p>No suitable snippets were found.</p>
+                    )}
                 </>
             )}
         </div>
