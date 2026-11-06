@@ -138,6 +138,32 @@ public class SourceSnippetExtractorTests
     }
 
     [Fact]
+    public void Extract_CSharpMethodWithMultilineParameters_ReturnsSnippet()
+    {
+        const string content = """
+            public class Calculator
+            {
+                public int Add(
+                    int a,
+                    int b)
+                {
+                    return a + b;
+                }
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("public int Add(", result[0].Code);
+        Assert.Contains("return a + b;", result[0].Code);
+    }
+
+    [Fact]
     public void Extract_PythonFunction_ReturnsSnippet()
     {
         const string content = """

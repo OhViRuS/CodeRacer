@@ -39,30 +39,9 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
 
         for (int i = 0; i < lines.Length; i++)
         {
-            string line = lines[i].Trim();
-
-            if (!LooksLikeMethodSignature(line))
+            if (!TryFindMethodOpeningBrace(lines, i, out int openingBraceLine))
             {
                 continue;
-            }
-
-            int openingBraceLine = i;
-
-            if (!line.Contains('{'))
-            {
-                openingBraceLine++;
-
-                while (openingBraceLine < lines.Length &&
-                       string.IsNullOrWhiteSpace(lines[openingBraceLine]))
-                {
-                    openingBraceLine++;
-                }
-
-                if (openingBraceLine >= lines.Length ||
-                    !lines[openingBraceLine].TrimStart().StartsWith('{'))
-                {
-                    continue;
-                }
             }
 
             int braceDepth = 0;
@@ -237,6 +216,72 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
         }
 
         return braceChange;
+    }
+
+    private static bool TryFindMethodOpeningBrace(
+        string[] lines,
+        int startLine,
+        out int openingBraceLine)
+    {
+        openingBraceLine = -1;
+
+        string firstLine = lines[startLine].Trim();
+
+        if (!firstLine.Contains('('))
+        {
+            return false;
+        }
+
+        var signatureLines = new List<string>();
+
+        for (int i = startLine; i < lines.Length; i++)
+        {
+            string line = lines[i].Trim();
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            signatureLines.Add(line);
+
+            if (!line.Contains(')'))
+            {
+                continue;
+            }
+
+            string signature = string.Join(" ", signatureLines);
+
+            if (!LooksLikeMethodSignature(signature))
+            {
+                return false;
+            }
+
+            if (line.Contains('{'))
+            {
+                openingBraceLine = i;
+                return true;
+            }
+
+            int nextLine = i + 1;
+
+            while (nextLine < lines.Length &&
+                   string.IsNullOrWhiteSpace(lines[nextLine]))
+            {
+                nextLine++;
+            }
+
+            if (nextLine < lines.Length &&
+                lines[nextLine].TrimStart().StartsWith('{'))
+            {
+                openingBraceLine = nextLine;
+                return true;
+            }
+
+            return false;
+        }
+
+        return false;
     }
 
     private static bool LooksLikeMethodSignature(string line)
