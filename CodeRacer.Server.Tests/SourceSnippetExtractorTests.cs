@@ -88,6 +88,56 @@ public class SourceSnippetExtractorTests
     }
 
     [Fact]
+    public void Extract_CSharpMethodWithBraceInString_ReturnsCompleteSnippet()
+    {
+        const string content = """
+            public class Example
+            {
+                public string GetValue()
+                {
+                    return "{";
+                }
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("return \"{\";", result[0].Code);
+        Assert.Equal(4, result[0].Code.Split('\n').Length);
+    }
+
+    [Fact]
+    public void Extract_CSharpMethodWithBraceInComment_ReturnsCompleteSnippet()
+    {
+        const string content = """
+            public class Example
+            {
+                public int GetValue()
+                {
+                    // {
+                    return 1;
+                }
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("// {", result[0].Code);
+        Assert.Contains("return 1;", result[0].Code);
+        Assert.Equal(5, result[0].Code.Split('\n').Length);
+    }
+
+    [Fact]
     public void Extract_PythonFunction_ReturnsSnippet()
     {
         const string content = """

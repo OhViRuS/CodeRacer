@@ -31,6 +31,7 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
     private static IReadOnlyList<ExtractedSourceSnippet> ExtractBraceBasedSnippets(string content)
     {
         var snippets = new List<ExtractedSourceSnippet>();
+
         string[] lines = content
             .Replace("\r\n", "\n")
             .Replace('\r', '\n')
@@ -66,22 +67,18 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
 
             int braceDepth = 0;
             bool foundOpeningBrace = false;
+            bool inBlockComment = false;
             int endLine = openingBraceLine;
 
             for (int j = openingBraceLine; j < lines.Length; j++)
             {
-                foreach (char character in lines[j])
-                {
-                    if (character == '{')
-                    {
-                        braceDepth++;
-                        foundOpeningBrace = true;
-                    }
-                    else if (character == '}')
-                    {
-                        braceDepth--;
-                    }
-                }
+                int braceChange = CountStructuralBraces(
+                    lines[j],
+                    ref inBlockComment,
+                    out bool hasOpeningBrace);
+
+                braceDepth += braceChange;
+                foundOpeningBrace |= hasOpeningBrace;
 
                 if (foundOpeningBrace && braceDepth == 0)
                 {
@@ -108,6 +105,138 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
         }
 
         return snippets;
+    }
+
+    private static int CountStructuralBraces(
+        string line,
+        ref bool inBlockComment,
+        out bool hasOpeningBrace)
+    {
+        int braceChange = 0;
+        bool inString = false;
+        bool inCharacter = false;
+        bool inTemplateString = false;
+        bool escaped = false;
+
+        hasOpeningBrace = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char character = line[i];
+
+            if (inBlockComment)
+            {
+                if (character == '*' &&
+                    i + 1 < line.Length &&
+                    line[i + 1] == '/')
+                {
+                    inBlockComment = false;
+                    i++;
+                }
+
+                continue;
+            }
+
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else if (character == '\\')
+                {
+                    escaped = true;
+                }
+                else if (character == '"')
+                {
+                    inString = false;
+                }
+
+                continue;
+            }
+
+            if (inCharacter)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else if (character == '\\')
+                {
+                    escaped = true;
+                }
+                else if (character == '\'')
+                {
+                    inCharacter = false;
+                }
+
+                continue;
+            }
+
+            if (inTemplateString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else if (character == '\\')
+                {
+                    escaped = true;
+                }
+                else if (character == '`')
+                {
+                    inTemplateString = false;
+                }
+
+                continue;
+            }
+
+            if (character == '/' &&
+                i + 1 < line.Length &&
+                line[i + 1] == '/')
+            {
+                break;
+            }
+
+            if (character == '/' &&
+                i + 1 < line.Length &&
+                line[i + 1] == '*')
+            {
+                inBlockComment = true;
+                i++;
+                continue;
+            }
+
+            if (character == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (character == '\'')
+            {
+                inCharacter = true;
+                continue;
+            }
+
+            if (character == '`')
+            {
+                inTemplateString = true;
+                continue;
+            }
+
+            if (character == '{')
+            {
+                braceChange++;
+                hasOpeningBrace = true;
+            }
+            else if (character == '}')
+            {
+                braceChange--;
+            }
+        }
+
+        return braceChange;
     }
 
     private static bool LooksLikeMethodSignature(string line)
