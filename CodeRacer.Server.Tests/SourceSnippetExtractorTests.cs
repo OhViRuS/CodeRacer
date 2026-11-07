@@ -138,6 +138,79 @@ public class SourceSnippetExtractorTests
     }
 
     [Fact]
+    public void Extract_CSharpMethodWithMultilineVerbatimString_ReturnsCompleteSnippet()
+    {
+        const string content = """
+            public class Example
+            {
+                public string GetText()
+                {
+                    var text = @"{
+            }";
+                    return text;
+                }
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("return text;", result[0].Code);
+    }
+
+    [Fact]
+    public void Extract_JavaScriptFunctionWithMultilineTemplateString_ReturnsCompleteSnippet()
+    {
+        const string content = """
+            function getText()
+            {
+                const text = `{
+            }`;
+                return text;
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.JavaScript,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("return text;", result[0].Code);
+    }
+
+    [Fact]
+    public void Extract_CSharpMethodWithMultilineRawString_ReturnsCompleteSnippet()
+    {
+        const string content = """"
+            public class Example
+            {
+                public string GetText()
+                {
+                    var text = """
+                        }
+                        """;
+                    return text;
+                }
+            }
+            """";
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("return text;", result[0].Code);
+    }
+
+    [Fact]
     public void Extract_CSharpMethodWithMultilineParameters_ReturnsSnippet()
     {
         const string content = """

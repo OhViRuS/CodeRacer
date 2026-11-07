@@ -47,6 +47,11 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
             int braceDepth = 0;
             bool foundOpeningBrace = false;
             bool inBlockComment = false;
+            bool inString = false;
+            bool inCharacter = false;
+            bool inTemplateString = false;
+            bool inVerbatimString = false;
+            int rawStringQuoteCount = 0;
             int endLine = openingBraceLine;
 
             for (int j = openingBraceLine; j < lines.Length; j++)
@@ -54,6 +59,11 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
                 int braceChange = CountStructuralBraces(
                     lines[j],
                     ref inBlockComment,
+                    ref inString,
+                    ref inCharacter,
+                    ref inTemplateString,
+                    ref inVerbatimString,
+                    ref rawStringQuoteCount,
                     out bool hasOpeningBrace);
 
                 braceDepth += braceChange;
@@ -89,12 +99,14 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
     private static int CountStructuralBraces(
         string line,
         ref bool inBlockComment,
+        ref bool inString,
+        ref bool inCharacter,
+        ref bool inTemplateString,
+        ref bool inVerbatimString,
+        ref int rawStringQuoteCount,
         out bool hasOpeningBrace)
     {
         int braceChange = 0;
-        bool inString = false;
-        bool inCharacter = false;
-        bool inTemplateString = false;
         bool escaped = false;
 
         hasOpeningBrace = false;
@@ -111,6 +123,44 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
                 {
                     inBlockComment = false;
                     i++;
+                }
+
+                continue;
+            }
+
+            if (rawStringQuoteCount > 0)
+            {
+                if (character == '"')
+                {
+                    int quoteCount = CountConsecutiveQuotes(line, i);
+
+                    if (quoteCount >= rawStringQuoteCount)
+                    {
+                        i += rawStringQuoteCount - 1;
+                        rawStringQuoteCount = 0;
+                    }
+                    else
+                    {
+                        i += quoteCount - 1;
+                    }
+                }
+
+                continue;
+            }
+
+            if (inVerbatimString)
+            {
+                if (character == '"')
+                {
+                    if (i + 1 < line.Length &&
+                        line[i + 1] == '"')
+                    {
+                        i++;
+                    }
+                    else
+                    {
+                        inVerbatimString = false;
+                    }
                 }
 
                 continue;
@@ -186,9 +236,29 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
                 continue;
             }
 
+            if (character == '@' &&
+                i + 1 < line.Length &&
+                line[i + 1] == '"')
+            {
+                inVerbatimString = true;
+                i++;
+                continue;
+            }
+
             if (character == '"')
             {
-                inString = true;
+                int quoteCount = CountConsecutiveQuotes(line, i);
+
+                if (quoteCount >= 3)
+                {
+                    rawStringQuoteCount = quoteCount;
+                    i += quoteCount - 1;
+                }
+                else
+                {
+                    inString = true;
+                }
+
                 continue;
             }
 
@@ -216,6 +286,19 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
         }
 
         return braceChange;
+    }
+
+    private static int CountConsecutiveQuotes(string line, int startIndex)
+    {
+        int count = 0;
+
+        while (startIndex + count < line.Length &&
+               line[startIndex + count] == '"')
+        {
+            count++;
+        }
+
+        return count;
     }
 
     private static bool TryFindMethodOpeningBrace(
