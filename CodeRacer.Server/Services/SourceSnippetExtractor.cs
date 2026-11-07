@@ -11,6 +11,7 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
     private const int MinSnippetLineCount = 2;
     private const int MaxSnippetLineCount = 40;
     private const int MaxSnippetCount = 50;
+
     /// <summary>
     /// Extracts suitable typing challenge snippets from source code
     /// based on the programming language.
@@ -295,6 +296,9 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
                 braceChange--;
             }
         }
+
+        inString = false;
+        inCharacter = false;
 
         return braceChange;
     }

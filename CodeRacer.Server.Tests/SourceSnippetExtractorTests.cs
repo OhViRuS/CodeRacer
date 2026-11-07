@@ -211,6 +211,120 @@ public class SourceSnippetExtractorTests
     }
 
     [Fact]
+    public void Extract_JavaScriptFunctionWithSingleQuoteRegex_ReturnsSnippet()
+    {
+        const string content = """
+            function containsQuote(value)
+            {
+                const regex = /'/;
+                return regex.test(value);
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.JavaScript,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("return regex.test(value);", result[0].Code);
+    }
+
+    [Fact]
+    public void Extract_JavaScriptFunctionWithDoubleQuoteRegex_ReturnsSnippet()
+    {
+        const string content = """
+            function containsQuote(value)
+            {
+                const regex = /"/;
+                return regex.test(value);
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.JavaScript,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("return regex.test(value);", result[0].Code);
+    }
+
+    [Fact]
+    public void Extract_CppFunctionWithDigitSeparator_ReturnsSnippet()
+    {
+        const string content = """
+            int getValue()
+            {
+                int value = 1'000;
+                return value;
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.Cpp,
+            content);
+
+        Assert.Single(result);
+        Assert.Contains("return value;", result[0].Code);
+    }
+
+    [Fact]
+    public void Extract_EmptyContent_ReturnsNoSnippets()
+    {
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            string.Empty);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Extract_ContentWithoutMethods_ReturnsNoSnippets()
+    {
+        const string content = """
+            public class Example
+            {
+                public int Value { get; set; }
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Extract_MethodWithUnbalancedBraces_ReturnsNoSnippet()
+    {
+        const string content = """
+            public class Example
+            {
+                public int GetValue()
+                {
+                    return 1;
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public void Extract_CSharpMethodWithMultilineParameters_ReturnsSnippet()
     {
         const string content = """
