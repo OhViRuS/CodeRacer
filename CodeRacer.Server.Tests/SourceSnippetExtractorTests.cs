@@ -237,6 +237,109 @@ public class SourceSnippetExtractorTests
     }
 
     [Fact]
+    public void Extract_OneLinePythonFunction_ReturnsNoSnippet()
+    {
+        const string content = "def add(a, b): return a + b";
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.Python,
+            content);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Extract_TwoLinePythonFunction_ReturnsSnippet()
+    {
+        const string content = """
+            def add(a, b):
+                return a + b
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.Python,
+            content);
+
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public void Extract_FortyLineMethod_ReturnsSnippet()
+    {
+        string body = string.Join(
+            "\n",
+            Enumerable.Range(0, 37)
+                .Select(index => $"        int value{index} = {index};"));
+
+        string content = $$"""
+            public class Example
+            {
+                public void Run()
+                {
+            {{body}}
+                }
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public void Extract_FortyOneLineMethod_ReturnsNoSnippet()
+    {
+        string body = string.Join(
+            "\n",
+            Enumerable.Range(0, 38)
+                .Select(index => $"        int value{index} = {index};"));
+
+        string content = $$"""
+            public class Example
+            {
+                public void Run()
+                {
+            {{body}}
+                }
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Extract_MoreThanMaximumSnippetCount_ReturnsMaximumSnippetCount()
+    {
+        string content = string.Join(
+            "\n\n",
+            Enumerable.Range(0, 60)
+                .Select(index =>
+                    $"def function_{index}():\n    return {index}"));
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.Python,
+            content);
+
+        Assert.Equal(50, result.Count);
+    }
+
+    [Fact]
     public void Extract_PythonFunction_ReturnsSnippet()
     {
         const string content = """

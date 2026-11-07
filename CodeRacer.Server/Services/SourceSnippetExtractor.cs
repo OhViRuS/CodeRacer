@@ -8,6 +8,9 @@ namespace CodeRacer.Server.Services;
 
 public class SourceSnippetExtractor : ISourceSnippetExtractor
 {
+    private const int MinSnippetLineCount = 2;
+    private const int MaxSnippetLineCount = 40;
+    private const int MaxSnippetCount = 50;
     /// <summary>
     /// Extracts suitable typing challenge snippets from source code
     /// based on the programming language.
@@ -39,6 +42,11 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
 
         for (int i = 0; i < lines.Length; i++)
         {
+            if (snippets.Count >= MaxSnippetCount)
+            {
+                break;
+            }
+
             if (!TryFindMethodOpeningBrace(lines, i, out int openingBraceLine))
             {
                 continue;
@@ -83,12 +91,15 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
 
             string code = string.Join(
                 "\n",
-                lines[i..(endLine + 1)]);
+                lines[i..(endLine + 1)]).Trim();
 
-            snippets.Add(new ExtractedSourceSnippet
+            if (IsSuitableSnippet(code))
             {
-                Code = code.Trim()
-            });
+                snippets.Add(new ExtractedSourceSnippet
+                {
+                    Code = code
+                });
+            }
 
             i = endLine;
         }
@@ -400,6 +411,11 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
 
         for (int i = 0; i < lines.Length; i++)
         {
+            if (snippets.Count >= MaxSnippetCount)
+            {
+                break;
+            }
+
             string trimmedLine = lines[i].TrimStart();
 
             if (!trimmedLine.StartsWith("def ", StringComparison.Ordinal) &&
@@ -430,16 +446,32 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
 
             string code = string.Join(
                 "\n",
-                lines[i..(endLine + 1)]);
+                lines[i..(endLine + 1)]).Trim();
 
-            snippets.Add(new ExtractedSourceSnippet
+            if (IsSuitableSnippet(code))
             {
-                Code = code.Trim()
-            });
+                snippets.Add(new ExtractedSourceSnippet
+                {
+                    Code = code
+                });
+            }
 
             i = endLine;
         }
 
         return snippets;
+    }
+
+    private static bool IsSuitableSnippet(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return false;
+        }
+
+        int lineCount = code.Count(character => character == '\n') + 1;
+
+        return lineCount >= MinSnippetLineCount &&
+               lineCount <= MaxSnippetLineCount;
     }
 }
