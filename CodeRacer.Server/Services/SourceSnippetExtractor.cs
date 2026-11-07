@@ -89,9 +89,9 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
                 continue;
             }
 
-            string code = string.Join(
+            string code = DedentSnippet(string.Join(
                 "\n",
-                lines[i..(endLine + 1)]).Trim();
+                lines[i..(endLine + 1)]));
 
             if (IsSuitableSnippet(code))
             {
@@ -444,9 +444,9 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
                 }
             }
 
-            string code = string.Join(
+            string code = DedentSnippet(string.Join(
                 "\n",
-                lines[i..(endLine + 1)]).Trim();
+                lines[i..(endLine + 1)]));
 
             if (IsSuitableSnippet(code))
             {
@@ -473,5 +473,32 @@ public class SourceSnippetExtractor : ISourceSnippetExtractor
 
         return lineCount >= MinSnippetLineCount &&
                lineCount <= MaxSnippetLineCount;
+    }
+
+    private static string DedentSnippet(string code)
+    {
+        string[] lines = code
+            .Replace("\r\n", "\n")
+            .Replace('\r', '\n')
+            .Split('\n');
+
+        if (lines.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        string firstLine = lines[0];
+        int indentationLength = firstLine.Length - firstLine.TrimStart().Length;
+        string indentation = firstLine[..indentationLength];
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].StartsWith(indentation, StringComparison.Ordinal))
+            {
+                lines[i] = lines[i][indentation.Length..];
+            }
+        }
+
+        return string.Join("\n", lines).Trim();
     }
 }

@@ -237,6 +237,60 @@ public class SourceSnippetExtractorTests
     }
 
     [Fact]
+    public void Extract_CSharpNestedMethod_NormalizesIndentation()
+    {
+        const string content = """
+            namespace Example
+            {
+                public class Calculator
+                {
+                    public int Add(int a, int b)
+                    {
+                        return a + b;
+                    }
+                }
+            }
+            """;
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Single(result);
+
+        const string expected =
+            "public int Add(int a, int b)\n" +
+            "{\n" +
+            "    return a + b;\n" +
+            "}";
+
+        Assert.Equal(expected, result[0].Code);
+    }
+
+    [Fact]
+    public void Extract_CSharpMethodWithTabs_NormalizesIndentation()
+    {
+        const string content =
+            "\tpublic int Add(int a, int b)\n" +
+            "\t{\n" +
+            "\t\treturn a + b;\n" +
+            "\t}";
+
+        var extractor = new SourceSnippetExtractor();
+
+        var result = extractor.Extract(
+            ProgrammingLanguage.CSharp,
+            content);
+
+        Assert.Single(result);
+        Assert.Equal(
+            "public int Add(int a, int b)\n{\n\treturn a + b;\n}",
+            result[0].Code);
+    }
+
+    [Fact]
     public void Extract_OneLinePythonFunction_ReturnsNoSnippet()
     {
         const string content = "def add(a, b): return a + b";
