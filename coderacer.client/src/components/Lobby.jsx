@@ -7,7 +7,7 @@ import SourceFileImport from './SourceFileImport';
 import useLobby from '../hooks/useLobby';
 import useLanguage from '../hooks/useLanguage';
 
-function Lobby({ onStartGame }) {
+function Lobby({ onStartGame, onStartImportedChallenge }) {
     const {
         lobby,
         createLobby,
@@ -74,7 +74,7 @@ function Lobby({ onStartGame }) {
                     />
                 </div>
 
-                <SourceFileImport />
+                <SourceFileImport onStartChallenge={onStartImportedChallenge} />
             </>
         );
     }
