@@ -8,14 +8,20 @@ namespace CodeRacer.Server.Settings;
 /// Strongly typed JWT settings, bound from the "Jwt" configuration section.
 /// The single source of truth for both issuing tokens (AuthenticationService)
 /// and validating them (JWT bearer authentication in Program.cs).
-/// Validated when the application starts, so a missing or weak key fails fast.
+/// Validated when the application starts, so a missing or weak key fails fast with instructions,
+/// instead of the app running with a key that is public in the repository.
 /// </summary>
 public class JwtOptions
 {
     public const string SectionName = "Jwt";
 
-    [Required]
-    [MinLength(32, ErrorMessage = "Jwt:SecretKey must be at least 32 characters long.")]
+    public const string MissingSecretKeyMessage =
+        "Jwt:SecretKey is missing or shorter than 32 characters. It is only set for Development and Testing; "
+        + "for any other environment supply it with the Jwt__SecretKey environment variable or "
+        + "'dotnet user-secrets set \"Jwt:SecretKey\" \"<at least 32 characters>\"'.";
+
+    [Required(ErrorMessage = MissingSecretKeyMessage)]
+    [MinLength(32, ErrorMessage = MissingSecretKeyMessage)]
     public string SecretKey { get; set; } = string.Empty;
 
     [Required]

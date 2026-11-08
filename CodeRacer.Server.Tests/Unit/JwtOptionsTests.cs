@@ -44,6 +44,22 @@ public class JwtOptionsTests
     }
 
     [Theory]
+    [InlineData("")]
+    [InlineData("too_short_secret")]
+    public void Validate_MissingOrShortSecretKey_ErrorExplainsHowToSupplyIt(string secretKey)
+    {
+        // Arrange
+        var options = new JwtOptions { SecretKey = secretKey };
+
+        // Act
+        var error = Validate(options).Single(e => e.MemberNames.Contains(nameof(JwtOptions.SecretKey)));
+
+        // Assert
+        Assert.Contains("Jwt__SecretKey", error.ErrorMessage);
+        Assert.Contains("dotnet user-secrets", error.ErrorMessage);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(-5)]
     [InlineData(24 * 60 + 1)]
