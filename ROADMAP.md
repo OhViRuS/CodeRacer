@@ -33,9 +33,9 @@ functionality to the requirements of each lab assignment.
 
 ### Features
 
-- [ ] User accounts.
-- [ ] Save typing challenge results.
-- [ ] Personal statistics and race history.
+- [x] User accounts.
+- [x] Save typing challenge results.
+- [x] Personal statistics and race history.
 - [ ] Difficulty and topic filtering.
 - [x] Import source code files with supported extensions (`.cs`, `.cpp`, `.py`, `.js`) and a maximum file size of 5 MB.
 - [X] Validate imported files.
@@ -49,7 +49,7 @@ functionality to the requirements of each lab assignment.
 - [x] Generic type and generic method.
 - [x] Custom exception.
 - [ ] `async`/`await` for I/O.
-- [x] Shared memory/concurrency scenario.
+- [ ] Shared memory/concurrency scenario.
 - [x] Dependency Injection.
 - [x] At least 50% unit/integration test coverage.
 
