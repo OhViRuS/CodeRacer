@@ -34,8 +34,8 @@ functionality to the requirements of each lab assignment.
 ### Features
 
 - [ ] User accounts.
-- [ ] Save typing challenge results.
-- [ ] Personal statistics and race history.
+- [x] Save typing challenge results.
+- [x] Personal statistics and race history.
 - [ ] Difficulty and topic filtering.
 - [x] Import source code files with supported extensions (`.cs`, `.cpp`, `.py`, `.js`) and a maximum file size of 5 MB.
 - [X] Validate imported files.
@@ -45,12 +45,12 @@ functionality to the requirements of each lab assignment.
 
 ### Requirement Coverage
 
-- [ ] Entity Framework and relational database.
+- [x] Entity Framework and relational database.
 - [ ] Generic type and generic method.
 - [x] Custom exception.
-- [ ] `async`/`await` for I/O.
+- [x] `async`/`await` for I/O.
 - [ ] Shared memory/concurrency scenario.
-- [ ] Dependency Injection.
+- [x] Dependency Injection.
 - [ ] At least 50% unit/integration test coverage.
 
 ## Final - matches Lab Assignment #3 (lectures 11-14)

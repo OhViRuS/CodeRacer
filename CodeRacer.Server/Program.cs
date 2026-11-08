@@ -17,6 +17,7 @@ builder.Services.AddSingleton<ICodeSnippetRepository>(sp => sp.GetRequiredServic
 builder.Services.AddSingleton<ICodeSnippetProvider>(sp => sp.GetRequiredService<FileSnippetProvider>());
 builder.Services.AddSingleton<ISourceFileImporter, SourceFileImporter>();
 builder.Services.AddSingleton<ISourceSnippetExtractor, SourceSnippetExtractor>();
+builder.Services.AddScoped<IRaceResultService, RaceResultService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
