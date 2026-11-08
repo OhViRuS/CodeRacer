@@ -2,6 +2,7 @@ using CodeRacer.Server.Dtos;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
 using CodeRacer.Server.Services;
+using CodeRacer.Server.Tests.TestDoubles;
 using NSubstitute;
 
 namespace CodeRacer.Server.Tests.Unit;
@@ -14,13 +15,16 @@ namespace CodeRacer.Server.Tests.Unit;
 public class RaceResultServiceTests
 {
     private readonly IRaceResultRepository _raceResultRepository = Substitute.For<IRaceResultRepository>();
+    private readonly ICodeSnippetProvider _snippetProvider = Substitute.For<ICodeSnippetProvider>();
+    private readonly ISnippetRecordRepository _snippetRecordRepository = Substitute.For<ISnippetRecordRepository>();
+    private readonly FixedTimeProvider _clock = new();
     private readonly IRaceResultService _raceResultService;
 
     private static CancellationToken Cancellation => CancellationToken.None;
 
     public RaceResultServiceTests()
     {
-        _raceResultService = new RaceResultService(_raceResultRepository);
+        _raceResultService = new RaceResultService(_raceResultRepository, _snippetProvider, _snippetRecordRepository, _clock);
     }
 
     #region Save Race Result Tests
@@ -50,6 +54,8 @@ public class RaceResultServiceTests
             CreatedAt = DateTime.UtcNow
         };
 
+        var snippet = new CodeSnippet { Id = request.CodeSnippetId, CodeText = "x", ProgrammingConcept = "Output" };
+        _snippetProvider.GetById(request.CodeSnippetId).Returns(snippet);
         _raceResultRepository.AddAsync(Arg.Any<RaceResult>(), Cancellation).Returns(savedResult);
 
         // Act
@@ -65,6 +71,56 @@ public class RaceResultServiceTests
         Assert.Equal(request.Accuracy, result.Accuracy);
         Assert.Equal(request.Mistakes, result.Mistakes);
         await _raceResultRepository.Received(1).AddAsync(Arg.Any<RaceResult>(), Cancellation);
+        await _snippetRecordRepository.Received(1).EnsureExistsAsync(snippet, Cancellation);
+    }
+
+    [Fact]
+    public async Task SaveRaceResultAsync_ValidRequest_StampsCreatedAtFromClock()
+    {
+        // Arrange
+        var request = new SaveRaceResultRequest(Guid.NewGuid(), TimeSpan.FromSeconds(30), 100.5, 95.0, 2);
+        _snippetProvider.GetById(request.CodeSnippetId)
+            .Returns(new CodeSnippet { Id = request.CodeSnippetId, CodeText = "x", ProgrammingConcept = "Output" });
+        _raceResultRepository.AddAsync(Arg.Any<RaceResult>(), Cancellation).Returns(call => call.Arg<RaceResult>());
+
+        // Act
+        var result = await _raceResultService.SaveRaceResultAsync(Guid.NewGuid(), request, Cancellation);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(FixedTimeProvider.DefaultNow.UtcDateTime, result.CreatedAt);
+    }
+
+    [Fact]
+    public async Task SaveRaceResultAsync_CancelledToken_ThrowsAndDoesNoWork()
+    {
+        // Arrange
+        var request = new SaveRaceResultRequest(Guid.NewGuid(), TimeSpan.FromSeconds(30), 100.5, 95.0, 2);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => _raceResultService.SaveRaceResultAsync(Guid.NewGuid(), request, cts.Token));
+        Assert.Empty(_snippetProvider.ReceivedCalls());
+        Assert.Empty(_snippetRecordRepository.ReceivedCalls());
+        Assert.Empty(_raceResultRepository.ReceivedCalls());
+    }
+
+    [Fact]
+    public async Task SaveRaceResultAsync_UnknownSnippet_ReturnsNullAndSavesNothing()
+    {
+        // Arrange
+        var request = new SaveRaceResultRequest(Guid.NewGuid(), TimeSpan.FromSeconds(30), 100.5, 95.0, 2);
+        _snippetProvider.GetById(request.CodeSnippetId).Returns((CodeSnippet?)null);
+
+        // Act
+        var result = await _raceResultService.SaveRaceResultAsync(Guid.NewGuid(), request, Cancellation);
+
+        // Assert
+        Assert.Null(result);
+        await _snippetRecordRepository.DidNotReceiveWithAnyArgs().EnsureExistsAsync(default!, default);
+        await _raceResultRepository.DidNotReceiveWithAnyArgs().AddAsync(default!, default);
     }
 
     #endregion
@@ -137,7 +193,7 @@ public class RaceResultServiceTests
     }
 
     [Fact]
-    public async Task GetUserRaceResultsAsync_ReturnsAllUserResults()
+    public async Task GetUserRaceResultsAsync_UserHasResults_ReturnsAllResults()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -159,7 +215,7 @@ public class RaceResultServiceTests
     }
 
     [Fact]
-    public async Task GetRecentRaceResultsAsync_ReturnsSpecifiedNumberOfResults()
+    public async Task GetRecentRaceResultsAsync_CountGiven_ReturnsThatManyResults()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -180,7 +236,7 @@ public class RaceResultServiceTests
     }
 
     [Fact]
-    public async Task GetRaceResultsByDateRangeAsync_ReturnsResultsInRange()
+    public async Task GetRaceResultsByDateRangeAsync_ValidRange_ReturnsResultsInRange()
     {
         // Arrange
         var userId = Guid.NewGuid();

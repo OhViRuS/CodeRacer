@@ -1,7 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 using CodeRacer.Server.Interfaces;
+using CodeRacer.Server.Models;
+using CodeRacer.Server.Settings;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CodeRacer.Server.Services;
@@ -9,11 +11,15 @@ namespace CodeRacer.Server.Services;
 /// <summary>
 /// JWT-based authentication service.
 /// Generates tokens and handles password hashing with bcrypt.
+/// Reads its settings from <see cref="JwtOptions"/> and the current time from <see cref="TimeProvider"/>,
+/// so tests can supply both.
 /// </summary>
-public class AuthenticationService(IConfiguration configuration) : IAuthenticationService
+public class AuthenticationService(IOptions<JwtOptions> jwtOptions, TimeProvider timeProvider) : IAuthenticationService
 {
-    private readonly IConfiguration _configuration = configuration;
     private const int BcryptWorkFactor = 12; // Balance between security and performance
+
+    private readonly JwtOptions _jwtOptions = jwtOptions.Value;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     public string HashPassword(string password)
     {
@@ -36,22 +42,20 @@ public class AuthenticationService(IConfiguration configuration) : IAuthenticati
         {
             return BCrypt.Net.BCrypt.Verify(password, hash);
         }
-        catch
+        catch (BCrypt.Net.SaltParseException)
         {
             return false;
         }
     }
 
-    public string GenerateToken(Guid userId, string userName)
+    public AuthenticationToken GenerateToken(Guid userId, string userName)
     {
-        var secretKey = _configuration["Jwt:SecretKey"];
-        if (string.IsNullOrWhiteSpace(secretKey))
+        if (string.IsNullOrWhiteSpace(_jwtOptions.SecretKey))
         {
             throw new InvalidOperationException("JWT SecretKey is not configured");
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var credentials = new SigningCredentials(_jwtOptions.CreateSigningKey(), SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>
         {
@@ -59,23 +63,18 @@ public class AuthenticationService(IConfiguration configuration) : IAuthenticati
             new(ClaimTypes.Name, userName)
         };
 
+        var issuedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        var expiresAt = issuedAt.Add(_jwtOptions.Expiration);
+
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"] ?? "CodeRacer",
-            audience: _configuration["Jwt:Audience"] ?? "CodeRacerApp",
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.Add(GetTokenExpiration()),
+            notBefore: issuedAt,
+            expires: expiresAt,
             signingCredentials: credentials
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    public TimeSpan GetTokenExpiration()
-    {
-        var expirationMinutes = int.TryParse(_configuration["Jwt:ExpirationMinutes"], out var minutes)
-            ? minutes
-            : 60; // Default to 1 hour
-
-        return TimeSpan.FromMinutes(expirationMinutes);
+        return new AuthenticationToken(new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
     }
 }

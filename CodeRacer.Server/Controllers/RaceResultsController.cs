@@ -1,5 +1,5 @@
-using System.Security.Claims;
 using CodeRacer.Server.Dtos;
+using CodeRacer.Server.Extensions;
 using CodeRacer.Server.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,34 +8,23 @@ namespace CodeRacer.Server.Controllers;
 
 /// <summary>
 /// API controller for race results.
-/// Handles saving and retrieving typing challenge race results.
-/// Thread-safe: each request gets its own cancellation token via ASP.NET Core.
-/// All endpoints require a valid JWT bearer token.
+/// Handles saving and retrieving typing challenge race results of the signed-in user.
+/// All endpoints require a valid JWT bearer token; request bodies are validated by [ApiController].
 /// </summary>
 [ApiController]
-[Authorize]
 [Route("api/[controller]")]
+[Authorize]
 public class RaceResultsController(IRaceResultService raceResultService) : ControllerBase
 {
+    private const int DefaultRecentCount = 10;
+    private const int MaxRecentCount = 100;
+
     private readonly IRaceResultService _raceResultService = raceResultService;
-
-    /// <summary>
-    /// Gets the current authenticated user's ID from the JWT token.
-    /// </summary>
-    private Guid GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-        if (Guid.TryParse(userIdClaim?.Value, out var userId))
-        {
-            return userId;
-        }
-
-        throw new UnauthorizedAccessException("User ID not found in token");
-    }
 
     /// <summary>
     /// Saves a race result for the current user.
     /// Returns 201 (Created) with the saved race result,
+    /// 400 (Bad Request) if the request is invalid or the code snippet does not exist,
     /// 401 (Unauthorized) if user is not authenticated.
     /// </summary>
     [HttpPost]
@@ -43,22 +32,24 @@ public class RaceResultsController(IRaceResultService raceResultService) : Contr
         [FromBody] SaveRaceResultRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var result = await _raceResultService.SaveRaceResultAsync(userId, request, cancellationToken);
-            return CreatedAtAction(nameof(GetRaceResult), new { resultId = result.Id }, result);
-        }
-        catch (UnauthorizedAccessException)
+        if (!User.TryGetUserId(out var userId))
         {
             return Unauthorized();
         }
+
+        var result = await _raceResultService.SaveRaceResultAsync(userId, request, cancellationToken);
+        if (result == null)
+        {
+            return BadRequest(new { message = $"Code snippet '{request.CodeSnippetId}' does not exist." });
+        }
+
+        return CreatedAtAction(nameof(GetRaceResult), new { resultId = result.Id }, result);
     }
 
     /// <summary>
     /// Gets a specific race result by ID.
     /// Returns 200 (OK) with the race result,
-    /// 404 (Not Found) if result doesn't exist or user doesn't have access,
+    /// 404 (Not Found) if result doesn't exist or belongs to another user,
     /// 401 (Unauthorized) if not authenticated.
     /// </summary>
     [HttpGet("{resultId:guid}")]
@@ -66,21 +57,18 @@ public class RaceResultsController(IRaceResultService raceResultService) : Contr
         [FromRoute] Guid resultId,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var result = await _raceResultService.GetRaceResultByIdAsync(resultId, userId, cancellationToken);
-            if (result == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(result);
-        }
-        catch (UnauthorizedAccessException)
+        if (!User.TryGetUserId(out var userId))
         {
             return Unauthorized();
         }
+
+        var result = await _raceResultService.GetRaceResultByIdAsync(resultId, userId, cancellationToken);
+        if (result == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
     }
 
     /// <summary>
@@ -92,47 +80,43 @@ public class RaceResultsController(IRaceResultService raceResultService) : Contr
     public async Task<ActionResult<IReadOnlyList<RaceResultDto>>> GetUserRaceResults(
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var results = await _raceResultService.GetUserRaceResultsAsync(userId, cancellationToken);
-            return Ok(results);
-        }
-        catch (UnauthorizedAccessException)
+        if (!User.TryGetUserId(out var userId))
         {
             return Unauthorized();
         }
+
+        var results = await _raceResultService.GetUserRaceResultsAsync(userId, cancellationToken);
+        return Ok(results);
     }
 
     /// <summary>
-    /// Gets the most recent race results for the current user.
+    /// Gets the most recent race results for the current user (10 when count is not given).
     /// Returns 200 (OK) with list of recent race results,
+    /// 400 (Bad Request) if count is outside 1-100,
     /// 401 (Unauthorized) if not authenticated.
     /// </summary>
     [HttpGet("recent")]
     public async Task<ActionResult<IReadOnlyList<RaceResultDto>>> GetRecentRaceResults(
-        [FromQuery] int count = 10,
-        CancellationToken cancellationToken = default)
+        [FromQuery] int? count,
+        CancellationToken cancellationToken)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            if (count < 1 || count > 100)
-            {
-                return BadRequest("Count must be between 1 and 100");
-            }
-
-            var results = await _raceResultService.GetRecentRaceResultsAsync(userId, count, cancellationToken);
-            return Ok(results);
-        }
-        catch (UnauthorizedAccessException)
+        if (!User.TryGetUserId(out var userId))
         {
             return Unauthorized();
         }
+
+        var take = count ?? DefaultRecentCount;
+        if (take < 1 || take > MaxRecentCount)
+        {
+            return BadRequest(new { message = $"Count must be between 1 and {MaxRecentCount}." });
+        }
+
+        var results = await _raceResultService.GetRecentRaceResultsAsync(userId, take, cancellationToken);
+        return Ok(results);
     }
 
     /// <summary>
-    /// Gets race results for a specific date range.
+    /// Gets race results for a specific date range. Dates without a time zone are treated as UTC.
     /// Returns 200 (OK) with list of race results,
     /// 400 (Bad Request) if date range is invalid,
     /// 401 (Unauthorized) if not authenticated.
@@ -143,27 +127,26 @@ public class RaceResultsController(IRaceResultService raceResultService) : Contr
         [FromQuery] DateTime to,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            if (from > to)
-            {
-                return BadRequest("'from' date must be before 'to' date");
-            }
-
-            var userId = GetCurrentUserId();
-            var results = await _raceResultService.GetRaceResultsByDateRangeAsync(userId, from, to, cancellationToken);
-            return Ok(results);
-        }
-        catch (UnauthorizedAccessException)
+        if (!User.TryGetUserId(out var userId))
         {
             return Unauthorized();
         }
+
+        var fromUtc = from.AsUtc();
+        var toUtc = to.AsUtc();
+        if (fromUtc > toUtc)
+        {
+            return BadRequest(new { message = "'from' date must be before 'to' date." });
+        }
+
+        var results = await _raceResultService.GetRaceResultsByDateRangeAsync(userId, fromUtc, toUtc, cancellationToken);
+        return Ok(results);
     }
 
     /// <summary>
     /// Deletes a race result.
     /// Returns 204 (No Content) on success,
-    /// 404 (Not Found) if result doesn't exist or user doesn't have access,
+    /// 404 (Not Found) if result doesn't exist or belongs to another user,
     /// 401 (Unauthorized) if not authenticated.
     /// </summary>
     [HttpDelete("{resultId:guid}")]
@@ -171,20 +154,17 @@ public class RaceResultsController(IRaceResultService raceResultService) : Contr
         [FromRoute] Guid resultId,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var deleted = await _raceResultService.DeleteRaceResultAsync(resultId, userId, cancellationToken);
-            if (!deleted)
-            {
-                return NotFound();
-            }
-
-            return NoContent();
-        }
-        catch (UnauthorizedAccessException)
+        if (!User.TryGetUserId(out var userId))
         {
             return Unauthorized();
         }
+
+        var deleted = await _raceResultService.DeleteRaceResultAsync(resultId, userId, cancellationToken);
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
     }
 }

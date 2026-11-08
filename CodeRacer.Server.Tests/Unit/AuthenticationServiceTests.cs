@@ -1,34 +1,34 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Services;
-using Microsoft.Extensions.Configuration;
+using CodeRacer.Server.Settings;
+using CodeRacer.Server.Tests.TestDoubles;
+using Microsoft.Extensions.Options;
 
 namespace CodeRacer.Server.Tests.Unit;
 
 /// <summary>
 /// Unit tests for AuthenticationService.
 /// Tests password hashing, verification, and JWT token generation.
-/// Uses IConfiguration from Microsoft.Extensions.Configuration.
+/// Uses a fixed clock, so token lifetimes can be checked exactly.
 /// </summary>
 public class AuthenticationServiceTests
 {
-    private readonly IConfiguration _configuration;
+    private readonly FixedTimeProvider _clock = new();
+    private readonly JwtOptions _jwtOptions = new()
+    {
+        SecretKey = "this_is_a_very_long_secret_key_for_testing_purposes_at_least_32_characters",
+        Issuer = "CodeRacer",
+        Audience = "CodeRacerApp",
+        ExpirationMinutes = 60
+    };
+
     private readonly IAuthenticationService _authenticationService;
 
     public AuthenticationServiceTests()
     {
-        var configDict = new Dictionary<string, string?>
-        {
-            { "Jwt:SecretKey", "this_is_a_very_long_secret_key_for_testing_purposes_at_least_32_characters" },
-            { "Jwt:Issuer", "CodeRacer" },
-            { "Jwt:Audience", "CodeRacerApp" },
-            { "Jwt:ExpirationMinutes", "60" }
-        };
-
-        _configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
-
-        _authenticationService = new AuthenticationService(_configuration);
+        _authenticationService = new AuthenticationService(Options.Create(_jwtOptions), _clock);
     }
 
     #region Password Hashing Tests
@@ -49,7 +49,7 @@ public class AuthenticationServiceTests
     }
 
     [Fact]
-    public void HashPassword_SamePasswordProducesDifferentHashes()
+    public void HashPassword_SamePasswordTwice_ProducesDifferentHashes()
     {
         // Arrange
         var password = "TestPassword123!";
@@ -135,73 +135,53 @@ public class AuthenticationServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var userName = "testuser";
 
         // Act
-        var token = _authenticationService.GenerateToken(userId, userName);
+        var token = _authenticationService.GenerateToken(userId, "testuser");
 
         // Assert
-        Assert.NotNull(token);
-        Assert.NotEmpty(token);
+        Assert.False(string.IsNullOrWhiteSpace(token.Token));
+    }
+
+    [Fact]
+    public void GenerateToken_FixedClock_ExpiresAfterConfiguredMinutes()
+    {
+        // Arrange
+        var expected = FixedTimeProvider.DefaultNow.UtcDateTime.AddMinutes(60);
+
+        // Act
+        var token = _authenticationService.GenerateToken(Guid.NewGuid(), "testuser");
+
+        // Assert
+        Assert.Equal(expected, token.ExpiresAt);
+        Assert.Equal(expected, new JwtSecurityTokenHandler().ReadJwtToken(token.Token).ValidTo);
+    }
+
+    [Fact]
+    public void GenerateToken_ValidInput_ContainsUserIdAndNameClaims()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+
+        // Act
+        var token = _authenticationService.GenerateToken(userId, "testuser");
+
+        // Assert
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token.Token);
+        Assert.Contains(jwt.Claims, c => c.Type == ClaimTypes.NameIdentifier && c.Value == userId.ToString());
+        Assert.Contains(jwt.Claims, c => c.Type == ClaimTypes.Name && c.Value == "testuser");
+        Assert.Equal("CodeRacer", jwt.Issuer);
+        Assert.Contains("CodeRacerApp", jwt.Audiences);
     }
 
     [Fact]
     public void GenerateToken_NoConfiguredSecretKey_Throws()
     {
         // Arrange
-        var configDict = new Dictionary<string, string?>
-        {
-            { "Jwt:Issuer", "CodeRacer" },
-            { "Jwt:Audience", "CodeRacerApp" }
-        };
-
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
-
-        var service = new AuthenticationService(config);
-        var userId = Guid.NewGuid();
+        var service = new AuthenticationService(Options.Create(new JwtOptions { SecretKey = "" }), _clock);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => service.GenerateToken(userId, "testuser"));
-    }
-
-    #endregion
-
-    #region Token Expiration Tests
-
-    [Fact]
-    public void GetTokenExpiration_UseConfiguredValue_ReturnsCorrectTimeSpan()
-    {
-        // Act
-        var expiration = _authenticationService.GetTokenExpiration();
-
-        // Assert
-        Assert.Equal(TimeSpan.FromHours(1), expiration);
-    }
-
-    [Fact]
-    public void GetTokenExpiration_InvalidConfigValue_DefaultsToOneHour()
-    {
-        // Arrange
-        var configDict = new Dictionary<string, string?>
-        {
-            { "Jwt:SecretKey", "secret_key_very_long_for_testing_purposes_at_least_32_chars" },
-            { "Jwt:Issuer", "CodeRacer" },
-            { "Jwt:ExpirationMinutes", "invalid" }
-        };
-
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
-
-        var service = new AuthenticationService(config);
-
-        // Act
-        var expiration = service.GetTokenExpiration();
-
-        // Assert
-        Assert.Equal(TimeSpan.FromHours(1), expiration);
+        Assert.Throws<InvalidOperationException>(() => service.GenerateToken(Guid.NewGuid(), "testuser"));
     }
 
     #endregion

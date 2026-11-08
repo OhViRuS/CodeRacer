@@ -1,15 +1,14 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CodeRacer.Server.Dtos;
-using CodeRacer.Server.Models;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace CodeRacer.Server.Tests.Integration;
 
 /// <summary>
 /// Integration tests for UsersController.
-/// Tests the real ASP.NET Core application with PostgreSQL database.
-/// Uses WebApplicationFactory and makes actual HTTP requests.
+/// Runs the real ASP.NET Core pipeline (routing, validation, JSON, DI, JWT) in memory
+/// with WebApplicationFactory, against an EF Core in-memory database.
 /// </summary>
 public class UsersControllerIntegrationTests : IClassFixture<CodeRacerWebApplicationFactory>
 {
@@ -60,6 +59,22 @@ public class UsersControllerIntegrationTests : IClassFixture<CodeRacerWebApplica
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("")]
+    public async Task Register_InvalidEmail_Returns400WithFieldError(string email)
+    {
+        // Arrange
+        var request = new RegisterUserRequest("user" + Guid.NewGuid().ToString()[..8], email, "ValidPassword123!", "ValidPassword123!");
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/users/register", request);
+
+        // Assert - [ApiController] rejects it before the service runs
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Email", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -129,7 +144,7 @@ public class UsersControllerIntegrationTests : IClassFixture<CodeRacerWebApplica
     }
 
     [Fact]
-    public async Task GetProfile_ExistingUser_Returns200()
+    public async Task GetProfile_ExistingUser_Returns200WithoutEmail()
     {
         // Arrange - Register and get user ID
         var registerRequest = new RegisterUserRequest(
@@ -146,10 +161,47 @@ public class UsersControllerIntegrationTests : IClassFixture<CodeRacerWebApplica
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var userDto = await response.Content.ReadFromJsonAsync<UserDto>();
-        Assert.NotNull(userDto);
-        Assert.Equal(authResponse.User.Id, userDto.Id);
-        Assert.Equal(authResponse.User.UserName, userDto.UserName);
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(registerRequest.Email, json);
+        var profile = await response.Content.ReadFromJsonAsync<PublicUserDto>();
+        Assert.NotNull(profile);
+        Assert.Equal(authResponse.User.Id, profile.Id);
+        Assert.Equal(authResponse.User.UserName, profile.UserName);
+    }
+
+    [Fact]
+    public async Task GetOwnProfile_WithToken_Returns200WithEmail()
+    {
+        // Arrange
+        var registerRequest = new RegisterUserRequest(
+            "meuser" + Guid.NewGuid().ToString()[..8],
+            "me" + Guid.NewGuid().ToString()[..8] + "@example.com",
+            "ValidPassword123!",
+            "ValidPassword123!"
+        );
+        var registerResponse = await _client.PostAsJsonAsync("/api/users/register", registerRequest);
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthenticationResponse>();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/users/me");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var me = await response.Content.ReadFromJsonAsync<UserDto>();
+        Assert.Equal(authResponse.User.Id, me!.Id);
+        Assert.Equal(registerRequest.Email, me.Email);
+    }
+
+    [Fact]
+    public async Task GetOwnProfile_NoToken_Returns401()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/users/me");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -184,5 +236,6 @@ public class UsersControllerIntegrationTests : IClassFixture<CodeRacerWebApplica
         Assert.NotNull(stats);
         Assert.Equal(authResponse.User.Id, stats.UserId);
         Assert.Equal(0, stats.TotalRaces); // No races yet
+        Assert.Null(stats.FirstRaceDate);
     }
 }

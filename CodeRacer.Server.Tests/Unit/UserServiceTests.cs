@@ -1,29 +1,34 @@
 using CodeRacer.Server.Dtos;
+using CodeRacer.Server.Exceptions;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
 using CodeRacer.Server.Services;
+using CodeRacer.Server.Tests.TestDoubles;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 namespace CodeRacer.Server.Tests.Unit;
 
 /// <summary>
 /// Unit tests for UserService.
-/// Uses NSubstitute to mock IUserRepository and IAuthenticationService dependencies.
-/// All methods are async and properly await service calls.
+/// Uses NSubstitute to mock IUserRepository and IAuthenticationService dependencies,
+/// and a fixed clock so timestamps can be asserted exactly.
 /// </summary>
 public class UserServiceTests
 {
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
-    private readonly IRaceResultRepository _raceResultRepository = Substitute.For<IRaceResultRepository>();
     private readonly IAuthenticationService _authenticationService = Substitute.For<IAuthenticationService>();
+    private readonly FixedTimeProvider _clock = new();
     private readonly IUserService _userService;
 
     private static CancellationToken Cancellation => CancellationToken.None;
 
     public UserServiceTests()
     {
-        _userService = new UserService(_userRepository, _raceResultRepository, _authenticationService);
+        _userService = new UserService(_userRepository, _authenticationService, _clock);
     }
+
+    private static AuthenticationToken Token => new("token123", FixedTimeProvider.DefaultNow.UtcDateTime.AddHours(1));
 
     #region Registration Tests
 
@@ -45,8 +50,7 @@ public class UserServiceTests
         _userRepository.EmailExistsAsync(request.Email, Cancellation).Returns(false);
         _userRepository.AddAsync(Arg.Any<User>(), Cancellation).Returns(createdUser);
         _authenticationService.HashPassword(request.Password).Returns("hashed_password");
-        _authenticationService.GenerateToken(createdUser.Id, createdUser.UserName).Returns("token123");
-        _authenticationService.GetTokenExpiration().Returns(TimeSpan.FromHours(1));
+        _authenticationService.GenerateToken(createdUser.Id, createdUser.UserName).Returns(Token);
 
         // Act
         var result = await _userService.RegisterAsync(request, Cancellation);
@@ -57,7 +61,55 @@ public class UserServiceTests
         Assert.Equal(createdUser.Id, result.User.Id);
         Assert.Equal(request.UserName, result.User.UserName);
         Assert.Equal(request.Email, result.User.Email);
+        Assert.Equal(Token.ExpiresAt, result.ExpiresAt);
         await _userRepository.Received(1).AddAsync(Arg.Any<User>(), Cancellation);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ValidRequest_StampsCreatedAtFromClock()
+    {
+        // Arrange
+        var request = new RegisterUserRequest("testuser", "test@example.com", "ValidPass123", "ValidPass123");
+        _userRepository.AddAsync(Arg.Any<User>(), Cancellation).Returns(call => call.Arg<User>());
+        _authenticationService.GenerateToken(Arg.Any<Guid>(), Arg.Any<string>()).Returns(Token);
+
+        // Act
+        await _userService.RegisterAsync(request, Cancellation);
+
+        // Assert
+        await _userRepository.Received(1).AddAsync(
+            Arg.Is<User>(u => u.CreatedAt == FixedTimeProvider.DefaultNow.UtcDateTime),
+            Cancellation);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_DuplicateDetectedOnInsert_ReturnsNull()
+    {
+        // Arrange - the existence checks pass, but another request wins the race to insert
+        var request = new RegisterUserRequest("racer", "racer@example.com", "ValidPass123", "ValidPass123");
+        _userRepository.AddAsync(Arg.Any<User>(), Cancellation)
+            .ThrowsAsync(new DuplicateUserException(new Exception("unique index")));
+
+        // Act
+        var result = await _userService.RegisterAsync(request, Cancellation);
+
+        // Assert
+        Assert.Null(result);
+        _authenticationService.DidNotReceiveWithAnyArgs().GenerateToken(default, default!);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_CancelledToken_ThrowsAndDoesNoWork()
+    {
+        // Arrange
+        var request = new RegisterUserRequest("testuser", "test@example.com", "ValidPass123", "ValidPass123");
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _userService.RegisterAsync(request, cts.Token));
+        Assert.Empty(_userRepository.ReceivedCalls());
+        Assert.Empty(_authenticationService.ReceivedCalls());
     }
 
     [Fact]
@@ -129,8 +181,7 @@ public class UserServiceTests
 
         _userRepository.FindByUserNameAsync(request.UserNameOrEmail, Cancellation).Returns(user);
         _authenticationService.VerifyPassword(request.Password, user.PasswordHash).Returns(true);
-        _authenticationService.GenerateToken(user.Id, user.UserName).Returns("token123");
-        _authenticationService.GetTokenExpiration().Returns(TimeSpan.FromHours(1));
+        _authenticationService.GenerateToken(user.Id, user.UserName).Returns(Token);
 
         // Act
         var result = await _userService.LoginAsync(request, Cancellation);
@@ -159,8 +210,7 @@ public class UserServiceTests
         _userRepository.FindByUserNameAsync(request.UserNameOrEmail, Cancellation).Returns((User?)null);
         _userRepository.FindByEmailAsync(request.UserNameOrEmail, Cancellation).Returns(user);
         _authenticationService.VerifyPassword(request.Password, user.PasswordHash).Returns(true);
-        _authenticationService.GenerateToken(user.Id, user.UserName).Returns("token123");
-        _authenticationService.GetTokenExpiration().Returns(TimeSpan.FromHours(1));
+        _authenticationService.GenerateToken(user.Id, user.UserName).Returns(Token);
 
         // Act
         var result = await _userService.LoginAsync(request, Cancellation);
@@ -213,22 +263,15 @@ public class UserServiceTests
     #region Profile Tests
 
     [Fact]
-    public async Task GetUserProfileAsync_UserExists_ReturnsUserDto()
+    public async Task GetOwnProfileAsync_UserExists_ReturnsUserDtoWithEmail()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User
-        {
-            Id = userId,
-            UserName = "testuser",
-            Email = "test@example.com",
-            CreatedAt = DateTime.UtcNow
-        };
-
+        var user = new User { Id = userId, UserName = "testuser", Email = "test@example.com", CreatedAt = DateTime.UtcNow };
         _userRepository.GetByIdAsync(userId, Cancellation).Returns(user);
 
         // Act
-        var result = await _userService.GetUserProfileAsync(userId, Cancellation);
+        var result = await _userService.GetOwnProfileAsync(userId, Cancellation);
 
         // Assert
         Assert.NotNull(result);
@@ -238,83 +281,44 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task GetUserProfileAsync_UserNotFound_ReturnsNull()
+    public async Task GetOwnProfileAsync_UserNotFound_ReturnsNull()
     {
         // Arrange
         var userId = Guid.NewGuid();
         _userRepository.GetByIdAsync(userId, Cancellation).Returns((User?)null);
 
         // Act
-        var result = await _userService.GetUserProfileAsync(userId, Cancellation);
+        var result = await _userService.GetOwnProfileAsync(userId, Cancellation);
 
         // Assert
         Assert.Null(result);
     }
 
-    #endregion
-
-    #region Statistics Tests
-
     [Fact]
-    public async Task GetUserStatisticsAsync_UserWithRaces_ReturnsCorrectStatistics()
+    public async Task GetPublicProfileAsync_UserExists_ReturnsProfileWithoutEmail()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, UserName = "testuser", Email = "test@example.com" };
-        var raceResults = new List<RaceResult>
-        {
-            new() { Id = Guid.NewGuid(), UserId = userId, CompletionTime = TimeSpan.FromSeconds(30), TypingSpeed = 100, Accuracy = 95, Mistakes = 2, CreatedAt = DateTime.UtcNow.AddDays(-2) },
-            new() { Id = Guid.NewGuid(), UserId = userId, CompletionTime = TimeSpan.FromSeconds(25), TypingSpeed = 120, Accuracy = 96, Mistakes = 1, CreatedAt = DateTime.UtcNow.AddDays(-1) },
-            new() { Id = Guid.NewGuid(), UserId = userId, CompletionTime = TimeSpan.FromSeconds(20), TypingSpeed = 150, Accuracy = 98, Mistakes = 0, CreatedAt = DateTime.UtcNow }
-        };
-
+        var createdAt = FixedTimeProvider.DefaultNow.UtcDateTime;
+        var user = new User { Id = userId, UserName = "testuser", Email = "test@example.com", CreatedAt = createdAt };
         _userRepository.GetByIdAsync(userId, Cancellation).Returns(user);
-        _raceResultRepository.GetByUserIdAsync(userId, Cancellation).Returns(raceResults);
 
         // Act
-        var result = await _userService.GetUserStatisticsAsync(userId, Cancellation);
+        var result = await _userService.GetPublicProfileAsync(userId, Cancellation);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.TotalRaces);
-        Assert.Equal(123.33, result.AverageTypingSpeed, 2); // (100 + 120 + 150) / 3
-        Assert.Equal(96.33, result.AverageAccuracy, 2); // (95 + 96 + 98) / 3
-        Assert.Equal(150, result.BestTypingSpeed);
-        Assert.Equal(TimeSpan.FromSeconds(20), result.BestCompletionTime);
-        Assert.Equal(3, result.TotalMistakes); // 2 + 1 + 0
+        Assert.Equal(new PublicUserDto(userId, "testuser", createdAt), result);
     }
 
     [Fact]
-    public async Task GetUserStatisticsAsync_UserWithoutRaces_ReturnsZeroStatistics()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var user = new User { Id = userId, UserName = "testuser", Email = "test@example.com" };
-        var emptyRaceResults = new List<RaceResult>();
-
-        _userRepository.GetByIdAsync(userId, Cancellation).Returns(user);
-        _raceResultRepository.GetByUserIdAsync(userId, Cancellation).Returns(emptyRaceResults);
-
-        // Act
-        var result = await _userService.GetUserStatisticsAsync(userId, Cancellation);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0, result.TotalRaces);
-        Assert.Equal(0.0, result.AverageTypingSpeed);
-        Assert.Equal(0.0, result.AverageAccuracy);
-        Assert.Equal(0, result.TotalMistakes);
-    }
-
-    [Fact]
-    public async Task GetUserStatisticsAsync_UserNotFound_ReturnsNull()
+    public async Task GetPublicProfileAsync_UserNotFound_ReturnsNull()
     {
         // Arrange
         var userId = Guid.NewGuid();
         _userRepository.GetByIdAsync(userId, Cancellation).Returns((User?)null);
 
         // Act
-        var result = await _userService.GetUserStatisticsAsync(userId, Cancellation);
+        var result = await _userService.GetPublicProfileAsync(userId, Cancellation);
 
         // Assert
         Assert.Null(result);

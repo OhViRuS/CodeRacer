@@ -21,6 +21,48 @@ public class RepositoryContractTests
         return new CodeRacerDbContext(options);
     }
 
+    #region SnippetRecordRepository Contract Tests
+
+    private static CodeSnippet CreateSnippet() =>
+        new() { Id = Guid.NewGuid(), CodeText = "print(1)", Language = ProgrammingLanguage.Python, ProgrammingConcept = "Output" };
+
+    [Fact]
+    public async Task SnippetRecordRepository_EnsureExistsAsync_InsertsCopyWithoutTrackingIt()
+    {
+        // Arrange
+        var context = CreateTestDbContext();
+        var repository = new SnippetRecordRepository(context);
+        var snippet = CreateSnippet();
+
+        // Act
+        await repository.EnsureExistsAsync(snippet, CancellationToken.None);
+
+        // Assert
+        var stored = await context.CodeSnippets.AsNoTracking().SingleAsync();
+        Assert.Equal(snippet.Id, stored.Id);
+        Assert.Equal(snippet.CodeText, stored.CodeText);
+        Assert.Equal(snippet.Language, stored.Language);
+        Assert.Empty(context.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task SnippetRecordRepository_EnsureExistsAsync_CalledTwice_InsertsOnce()
+    {
+        // Arrange
+        var context = CreateTestDbContext();
+        var repository = new SnippetRecordRepository(context);
+        var snippet = CreateSnippet();
+
+        // Act
+        await repository.EnsureExistsAsync(snippet, CancellationToken.None);
+        await repository.EnsureExistsAsync(snippet, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, await context.CodeSnippets.CountAsync());
+    }
+
+    #endregion
+
     #region UserRepository Contract Tests
 
     [Fact]
@@ -163,7 +205,7 @@ public class RepositoryContractTests
     #region RaceResultRepository Contract Tests
 
     [Fact]
-    public async Task RaceResultRepository_SaveAndRetrieveByUserId()
+    public async Task RaceResultRepository_GetByUserIdAsync_ReturnsOnlyThatUsersResults()
     {
         // Arrange
         var context = CreateTestDbContext();
@@ -268,6 +310,67 @@ public class RepositoryContractTests
         // Assert
         Assert.Equal(2, inRange.Count);
         Assert.All(inRange, r => Assert.True(r.CreatedAt >= baseDate.AddDays(-3) && r.CreatedAt <= baseDate.AddDays(3)));
+    }
+
+    [Fact]
+    public async Task RaceResultRepository_GetByUserIdAsync_ReturnsNewestFirst()
+    {
+        // Arrange
+        var context = CreateTestDbContext();
+        var repository = new RaceResultRepository(context);
+        var userId = Guid.NewGuid();
+        var start = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        foreach (var daysAgo in new[] { 3, 1, 2 })
+        {
+            await repository.AddAsync(
+                new RaceResult(TimeSpan.FromSeconds(30), 100, 95) { UserId = userId, CreatedAt = start.AddDays(-daysAgo) },
+                CancellationToken.None);
+        }
+
+        // Act
+        var results = await repository.GetByUserIdAsync(userId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(new[] { start.AddDays(-1), start.AddDays(-2), start.AddDays(-3) }, results.Select(r => r.CreatedAt));
+    }
+
+    [Fact]
+    public async Task FindOrderedDescendingAsync_OtherKeyType_SortsByThatKeyAndTakesTop()
+    {
+        // Arrange - the generic method sorted by typing speed (double) instead of a date
+        var context = CreateTestDbContext();
+        var repository = new TopSpeedRaceResultRepository(context);
+        foreach (var speed in new[] { 80.0, 120.0, 95.0, 150.0 })
+        {
+            await repository.AddAsync(
+                new RaceResult(TimeSpan.FromSeconds(30), speed, 95) { UserId = Guid.NewGuid() },
+                CancellationToken.None);
+        }
+
+        // Act
+        var top = await repository.GetTopBySpeedAsync(2, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(new[] { 150.0, 120.0 }, top.Select(r => r.TypingSpeed));
+    }
+
+    [Fact]
+    public async Task FindOrderedDescendingAsync_CancelledToken_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var repository = new TopSpeedRaceResultRepository(CreateTestDbContext());
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => repository.GetTopBySpeedAsync(2, cts.Token));
+    }
+
+    /// <summary>Exposes the protected generic method with a non-date sort key, the way a leaderboard would use it.</summary>
+    private sealed class TopSpeedRaceResultRepository(CodeRacerDbContext context) : RaceResultRepository(context)
+    {
+        public Task<IReadOnlyList<RaceResult>> GetTopBySpeedAsync(int count, CancellationToken cancellationToken) =>
+            FindOrderedDescendingAsync(r => true, r => r.TypingSpeed, count, cancellationToken);
     }
 
     #endregion

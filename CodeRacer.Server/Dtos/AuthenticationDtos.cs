@@ -1,32 +1,45 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace CodeRacer.Server.Dtos;
 
 /// <summary>
 /// DTO for user registration request.
 /// Separates the HTTP contract from domain models (following SOLID).
+/// The attributes give clients field-level 400 errors; UserService repeats the checks.
 /// </summary>
 public record RegisterUserRequest(
-    string UserName,
-    string Email,
-    string Password,
-    string ConfirmPassword
+    [Required, StringLength(50, MinimumLength = 1)] string UserName,
+    [Required, EmailAddress, StringLength(320)] string Email,
+    [Required, MinLength(8)] string Password,
+    [Required] string ConfirmPassword
 );
 
 /// <summary>
 /// DTO for user login request.
 /// </summary>
 public record LoginRequest(
-    string UserNameOrEmail,
-    string Password
+    [Required] string UserNameOrEmail,
+    [Required] string Password
 );
 
 /// <summary>
-/// DTO for user data in responses.
+/// DTO for the signed-in user's own data (login response and /api/users/me).
 /// Does not include password hash for security.
 /// </summary>
 public record UserDto(
     Guid Id,
     string UserName,
     string Email,
+    DateTime CreatedAt
+);
+
+/// <summary>
+/// DTO for another user's public profile.
+/// Leaves out the email address, which only the user themself may see.
+/// </summary>
+public record PublicUserDto(
+    Guid Id,
+    string UserName,
     DateTime CreatedAt
 );
 
@@ -62,13 +75,14 @@ public record RaceResultDto(
 public record SaveRaceResultRequest(
     Guid CodeSnippetId,
     TimeSpan CompletionTime,
-    double TypingSpeed,
-    double Accuracy,
-    int Mistakes
+    [Range(0, double.MaxValue)] double TypingSpeed,
+    [Range(0, 100)] double Accuracy,
+    [Range(0, int.MaxValue)] int Mistakes
 );
 
 /// <summary>
 /// DTO for user statistics.
+/// BestCompletionTime, FirstRaceDate and LastRaceDate are null until the user has raced.
 /// </summary>
 public record UserStatisticsDto(
     Guid UserId,
@@ -76,8 +90,8 @@ public record UserStatisticsDto(
     double AverageTypingSpeed,
     double AverageAccuracy,
     double BestTypingSpeed,
-    TimeSpan BestCompletionTime,
+    TimeSpan? BestCompletionTime,
     int TotalMistakes,
-    DateTime FirstRaceDate,
-    DateTime LastRaceDate
+    DateTime? FirstRaceDate,
+    DateTime? LastRaceDate
 );

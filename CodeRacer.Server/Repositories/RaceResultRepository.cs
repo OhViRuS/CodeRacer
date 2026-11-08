@@ -1,51 +1,41 @@
 using CodeRacer.Server.Data;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace CodeRacer.Server.Repositories;
 
 /// <summary>
 /// RaceResult repository implementation.
-/// Provides race-result-specific queries for history, statistics, and leaderboards.
+/// Provides race-result-specific queries for history, statistics, and leaderboards,
+/// built on the generic FindOrderedDescendingAsync from <see cref="Repository{T}"/>.
 /// </summary>
 public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceResult>(context), IRaceResultRepository
 {
-    public async Task<IReadOnlyList<RaceResult>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        return await DbSet
-            .AsNoTracking()
-            .Where(r => r.UserId == userId)
-            .OrderByDescending(r => r.CreatedAt)
-            .ToListAsync(cancellationToken);
-    }
+    public Task<IReadOnlyList<RaceResult>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken) =>
+        FindOrderedDescendingAsync(
+            r => r.UserId == userId,
+            r => r.CreatedAt,
+            take: null,
+            cancellationToken);
 
-    public async Task<IReadOnlyList<RaceResult>> GetByUserIdAndDateRangeAsync(
+    public Task<IReadOnlyList<RaceResult>> GetByUserIdAndDateRangeAsync(
         Guid userId,
         DateTime from,
         DateTime to,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        return await DbSet
-            .AsNoTracking()
-            .Where(r => r.UserId == userId && r.CreatedAt >= from && r.CreatedAt <= to)
-            .OrderByDescending(r => r.CreatedAt)
-            .ToListAsync(cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        FindOrderedDescendingAsync(
+            r => r.UserId == userId && r.CreatedAt >= from && r.CreatedAt <= to,
+            r => r.CreatedAt,
+            take: null,
+            cancellationToken);
 
-    public async Task<IReadOnlyList<RaceResult>> GetRecentByUserIdAsync(
+    public Task<IReadOnlyList<RaceResult>> GetRecentByUserIdAsync(
         Guid userId,
         int count,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        return await DbSet
-            .AsNoTracking()
-            .Where(r => r.UserId == userId)
-            .OrderByDescending(r => r.CreatedAt)
-            .Take(count)
-            .ToListAsync(cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        FindOrderedDescendingAsync(
+            r => r.UserId == userId,
+            r => r.CreatedAt,
+            take: count,
+            cancellationToken);
 }

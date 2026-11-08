@@ -1,4 +1,5 @@
 using CodeRacer.Server.Dtos;
+using CodeRacer.Server.Exceptions;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
 
@@ -7,161 +8,114 @@ namespace CodeRacer.Server.Services;
 /// <summary>
 /// User service implementation.
 /// Coordinates user registration, authentication, and profile retrieval.
-/// Uses IUserRepository for data access and IAuthenticationService for security.
+/// Uses IUserRepository for data access, IAuthenticationService for security
+/// and TimeProvider for the current time.
 /// </summary>
 public class UserService(
     IUserRepository userRepository,
-    IRaceResultRepository raceResultRepository,
-    IAuthenticationService authenticationService) : IUserService
+    IAuthenticationService authenticationService,
+    TimeProvider timeProvider) : IUserService
 {
+    private const int MinimumPasswordLength = 8;
+
     private readonly IUserRepository _userRepository = userRepository;
-    private readonly IRaceResultRepository _raceResultRepository = raceResultRepository;
     private readonly IAuthenticationService _authenticationService = authenticationService;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     public async Task<AuthenticationResponse?> RegisterAsync(
         RegisterUserRequest request,
         CancellationToken cancellationToken)
     {
-        // Validate input
-        if (string.IsNullOrWhiteSpace(request.UserName))
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (string.IsNullOrWhiteSpace(request.UserName) || string.IsNullOrWhiteSpace(request.Email))
         {
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(request.Email))
+        if (string.IsNullOrWhiteSpace(request.Password)
+            || request.Password != request.ConfirmPassword
+            || request.Password.Length < MinimumPasswordLength)
         {
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(request.Password) || request.Password != request.ConfirmPassword)
+        if (await _userRepository.UserNameExistsAsync(request.UserName, cancellationToken))
         {
             return null;
         }
 
-        if (request.Password.Length < 8)
+        if (await _userRepository.EmailExistsAsync(request.Email, cancellationToken))
         {
             return null;
         }
 
-        // Check for existing username/email
-        var userNameExists = await _userRepository.UserNameExistsAsync(request.UserName, cancellationToken);
-        if (userNameExists)
-        {
-            return null;
-        }
-
-        var emailExists = await _userRepository.EmailExistsAsync(request.Email, cancellationToken);
-        if (emailExists)
-        {
-            return null;
-        }
-
-        // Create new user
         var user = new User
         {
             UserName = request.UserName,
             Email = request.Email,
             PasswordHash = _authenticationService.HashPassword(request.Password),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
-        var createdUser = await _userRepository.AddAsync(user, cancellationToken);
+        User createdUser;
+        try
+        {
+            createdUser = await _userRepository.AddAsync(user, cancellationToken);
+        }
+        catch (DuplicateUserException)
+        {
+            // Someone registered the same username/email between the checks above and the insert.
+            return null;
+        }
 
-        // Generate token and return authentication response
-        var token = _authenticationService.GenerateToken(createdUser.Id, createdUser.UserName);
-        var expiresAt = DateTime.UtcNow.Add(_authenticationService.GetTokenExpiration());
-
-        return new AuthenticationResponse(
-            token,
-            new UserDto(createdUser.Id, createdUser.UserName, createdUser.Email, createdUser.CreatedAt),
-            expiresAt
-        );
+        return CreateAuthenticationResponse(createdUser);
     }
 
     public async Task<AuthenticationResponse?> LoginAsync(
         LoginRequest request,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (string.IsNullOrWhiteSpace(request.UserNameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
         {
             return null;
         }
 
-        // Find user by username or email
         var user = await _userRepository.FindByUserNameAsync(request.UserNameOrEmail, cancellationToken);
         user ??= await _userRepository.FindByEmailAsync(request.UserNameOrEmail, cancellationToken);
 
-        if (user == null)
+        if (user == null || !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
         {
             return null;
         }
 
-        // Verify password
-        if (!_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
-        {
-            return null;
-        }
+        return CreateAuthenticationResponse(user);
+    }
 
-        // Generate token and return authentication response
+    public async Task<UserDto?> GetOwnProfileAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        return user == null ? null : ToUserDto(user);
+    }
+
+    public async Task<PublicUserDto?> GetPublicProfileAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        return user == null ? null : new PublicUserDto(user.Id, user.UserName, user.CreatedAt);
+    }
+
+    private AuthenticationResponse CreateAuthenticationResponse(User user)
+    {
         var token = _authenticationService.GenerateToken(user.Id, user.UserName);
-        var expiresAt = DateTime.UtcNow.Add(_authenticationService.GetTokenExpiration());
-
-        return new AuthenticationResponse(
-            token,
-            new UserDto(user.Id, user.UserName, user.Email, user.CreatedAt),
-            expiresAt
-        );
+        return new AuthenticationResponse(token.Token, ToUserDto(user), token.ExpiresAt);
     }
 
-    public async Task<UserDto?> GetUserProfileAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
-        if (user == null)
-        {
-            return null;
-        }
-
-        return new UserDto(user.Id, user.UserName, user.Email, user.CreatedAt);
-    }
-
-    public async Task<UserStatisticsDto?> GetUserStatisticsAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        // Check if user exists
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
-        if (user == null)
-        {
-            return null;
-        }
-
-        // Get all race results for the user
-        var raceResults = await _raceResultRepository.GetByUserIdAsync(userId, cancellationToken);
-
-        if (raceResults.Count == 0)
-        {
-            // User has no races yet
-            return new UserStatisticsDto(
-                userId,
-                0,
-                0.0,
-                0.0,
-                0.0,
-                TimeSpan.Zero,
-                0,
-                DateTime.UtcNow,
-                DateTime.UtcNow
-            );
-        }
-
-        return new UserStatisticsDto(
-            userId,
-            raceResults.Count,
-            raceResults.Average(r => r.TypingSpeed),
-            raceResults.Average(r => r.Accuracy),
-            raceResults.Max(r => r.TypingSpeed),
-            raceResults.Min(r => r.CompletionTime),
-            raceResults.Sum(r => r.Mistakes),
-            raceResults.Min(r => r.CreatedAt),
-            raceResults.Max(r => r.CreatedAt)
-        );
-    }
+    private static UserDto ToUserDto(User user) =>
+        new(user.Id, user.UserName, user.Email, user.CreatedAt);
 }

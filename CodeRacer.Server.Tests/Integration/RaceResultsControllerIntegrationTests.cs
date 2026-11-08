@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CodeRacer.Server.Dtos;
+using CodeRacer.Server.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CodeRacer.Server.Tests.Integration;
 
@@ -38,8 +40,12 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
         return (client, auth);
     }
 
-    private static SaveRaceResultRequest CreateRequest(double typingSpeed = 100.5) =>
-        new(Guid.NewGuid(), TimeSpan.FromSeconds(30), typingSpeed, 95.0, 2);
+    /// <summary>Builds a request for a snippet that really exists in snippets.json.</summary>
+    private SaveRaceResultRequest CreateRequest(double typingSpeed = 100.5)
+    {
+        var snippetId = _factory.Services.GetRequiredService<ICodeSnippetProvider>().GetSnippets()[0].Id;
+        return new SaveRaceResultRequest(snippetId, TimeSpan.FromSeconds(30), typingSpeed, 95.0, 2);
+    }
 
     [Fact]
     public async Task SaveRaceResult_ValidRequest_Returns201()
@@ -60,6 +66,55 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
         Assert.Equal(request.CodeSnippetId, result.CodeSnippetId);
         Assert.Equal(request.TypingSpeed, result.TypingSpeed);
         Assert.Equal(request.Mistakes, result.Mistakes);
+    }
+
+    [Fact]
+    public async Task SaveRaceResult_UnknownSnippet_Returns400()
+    {
+        var (client, _) = await CreateAuthenticatedClientAsync();
+        var request = CreateRequest() with { CodeSnippetId = Guid.NewGuid() };
+
+        var response = await client.PostAsJsonAsync("/api/raceresults", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(-1.0, 95.0)]
+    [InlineData(100.0, 150.0)]
+    public async Task SaveRaceResult_OutOfRangeValues_Returns400(double typingSpeed, double accuracy)
+    {
+        var (client, _) = await CreateAuthenticatedClientAsync();
+        var request = CreateRequest() with { TypingSpeed = typingSpeed, Accuracy = accuracy };
+
+        var response = await client.PostAsJsonAsync("/api/raceresults", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRecentRaceResults_NoCount_ReturnsUpToTen()
+    {
+        var (client, _) = await CreateAuthenticatedClientAsync();
+        await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+
+        var response = await client.GetAsync("/api/raceresults/recent");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var results = await response.Content.ReadFromJsonAsync<List<RaceResultDto>>();
+        Assert.Single(results!);
+    }
+
+    [Fact]
+    public async Task SaveRaceResult_SameSnippetTwice_BothSaved()
+    {
+        var (client, _) = await CreateAuthenticatedClientAsync();
+
+        var first = await client.PostAsJsonAsync("/api/raceresults", CreateRequest(80));
+        var second = await client.PostAsJsonAsync("/api/raceresults", CreateRequest(90));
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
     }
 
     [Fact]
@@ -111,7 +166,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     }
 
     [Fact]
-    public async Task GetUserRaceResults_ReturnsOnlyOwnResults()
+    public async Task GetUserRaceResults_OtherUsersHaveResults_ReturnsOnlyOwn()
     {
         var (client, auth) = await CreateAuthenticatedClientAsync();
         var (other, _) = await CreateAuthenticatedClientAsync();
@@ -161,7 +216,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     }
 
     [Fact]
-    public async Task UserStatistics_ReflectSavedResults()
+    public async Task GetStatistics_AfterSavingResults_ReflectsThem()
     {
         var (client, auth) = await CreateAuthenticatedClientAsync();
         await client.PostAsJsonAsync("/api/raceresults", CreateRequest(80));

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CodeRacer.Server.Data;
 using CodeRacer.Server.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -72,6 +73,34 @@ public class Repository<T>(CodeRacerDbContext context) : IRepository<T> where T 
         DbSet.Remove(existing);
         await Context.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    /// <summary>
+    /// Generic method: reads the entities matching <paramref name="filter"/>, sorted descending by
+    /// <paramref name="orderByDescending"/> (a key of any type, e.g. a date or a score), and keeps only
+    /// the first <paramref name="take"/> when it is given. The query runs in the database; results are
+    /// not tracked because callers only read them.
+    /// </summary>
+    /// <typeparam name="TKey">Type of the sort key, inferred from <paramref name="orderByDescending"/>.</typeparam>
+    protected async Task<IReadOnlyList<T>> FindOrderedDescendingAsync<TKey>(
+        Expression<Func<T, bool>> filter,
+        Expression<Func<T, TKey>> orderByDescending,
+        int? take,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        IQueryable<T> query = DbSet
+            .AsNoTracking()
+            .Where(filter)
+            .OrderByDescending(orderByDescending);
+
+        if (take is not null)
+        {
+            query = query.Take(take.Value);
+        }
+
+        return await query.ToListAsync(cancellationToken);
     }
 
     /// <summary>

@@ -1,19 +1,18 @@
 using CodeRacer.Server.Dtos;
-using CodeRacer.Server.Models;
 
 namespace CodeRacer.Server.Interfaces;
 
 /// <summary>
-/// Service for user management.
+/// Service for user accounts.
 /// Handles registration, login, and profile operations.
-/// Following Single Responsibility Principle - focuses only on user business logic.
+/// Following Single Responsibility Principle - statistics live in IUserStatisticsService.
 /// </summary>
 public interface IUserService
 {
     /// <summary>
     /// Registers a new user. Validates email/username uniqueness, password confirmation,
     /// and returns authentication response with JWT token.
-    /// Returns null if validation fails.
+    /// Returns null if validation fails or the username/email is taken.
     /// </summary>
     Task<AuthenticationResponse?> RegisterAsync(
         RegisterUserRequest request,
@@ -28,14 +27,14 @@ public interface IUserService
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Gets a user's profile information by user ID.
+    /// Gets the signed-in user's own profile, including the email address.
     /// Returns null if user not found.
     /// </summary>
-    Task<UserDto?> GetUserProfileAsync(Guid userId, CancellationToken cancellationToken);
+    Task<UserDto?> GetOwnProfileAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Gets user statistics (races completed, average speed, etc).
+    /// Gets another user's public profile, without the email address.
     /// Returns null if user not found.
     /// </summary>
-    Task<UserStatisticsDto?> GetUserStatisticsAsync(Guid userId, CancellationToken cancellationToken);
+    Task<PublicUserDto?> GetPublicProfileAsync(Guid userId, CancellationToken cancellationToken);
 }

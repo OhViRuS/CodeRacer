@@ -9,8 +9,11 @@ namespace CodeRacer.Server.Interfaces;
 /// </summary>
 public interface IRaceResultService
 {
-    /// <summary>Saves a race result for a user. Returns the saved race result DTO.</summary>
-    Task<RaceResultDto> SaveRaceResultAsync(
+    /// <summary>
+    /// Saves a race result for a user. Returns the saved race result DTO,
+    /// or null if the referenced code snippet does not exist.
+    /// </summary>
+    Task<RaceResultDto?> SaveRaceResultAsync(
         Guid userId,
         SaveRaceResultRequest request,
         CancellationToken cancellationToken);

@@ -1,3 +1,5 @@
+using CodeRacer.Server.Models;
+
 namespace CodeRacer.Server.Interfaces;
 
 /// <summary>
@@ -13,9 +15,9 @@ public interface IAuthenticationService
     /// <summary>Verifies a password against its hash. Returns true if password matches.</summary>
     bool VerifyPassword(string password, string hash);
 
-    /// <summary>Generates a JWT token for the user. Token expires in the configured duration.</summary>
-    string GenerateToken(Guid userId, string userName);
-
-    /// <summary>Gets the configured token expiration duration.</summary>
-    TimeSpan GetTokenExpiration();
+    /// <summary>
+    /// Generates a signed JWT for the user, valid for the configured duration.
+    /// Returns the token together with its expiry time.
+    /// </summary>
+    AuthenticationToken GenerateToken(Guid userId, string userName);
 }

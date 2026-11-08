@@ -5,6 +5,8 @@ namespace CodeRacer.Server.Interfaces;
 /// <summary>
 /// Repository for User entity.
 /// Extends IRepository with user-specific operations like FindByUserNameAsync and FindByEmailAsync.
+/// AddAsync throws <see cref="CodeRacer.Server.Exceptions.DuplicateUserException"/> when the
+/// username or email is already taken (the database's unique indexes are the final check).
 /// Following Single Responsibility Principle - each repository handles one aggregate root.
 /// </summary>
 public interface IUserRepository : IRepository<User>
