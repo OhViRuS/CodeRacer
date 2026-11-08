@@ -75,9 +75,9 @@ public record RaceResultDto(
 public record SaveRaceResultRequest(
     Guid CodeSnippetId,
     [Range(typeof(TimeSpan), "00:00:00.001", "1.00:00:00", ErrorMessage = "Completion time must be positive and less than a day.")] TimeSpan CompletionTime,
-    [Range(0, double.MaxValue)] double TypingSpeed,
-    [Range(0, 100)] double Accuracy,
-    [Range(0, int.MaxValue)] int Mistakes
+    [Range(0.0, 500.0, ErrorMessage = "Typing speed must be between 0 and 500.")] double TypingSpeed,
+    [Range(0.0, 100.0, ErrorMessage = "Accuracy must be between 0 and 100.")] double Accuracy,
+    [Range(0, 10_000, ErrorMessage = "Mistakes must be between 0 and 10000.")] int Mistakes
 );
 
 /// <summary>
@@ -91,7 +91,7 @@ public record UserStatisticsDto(
     double AverageAccuracy,
     double BestTypingSpeed,
     TimeSpan? BestCompletionTime,
-    int TotalMistakes,
+    long TotalMistakes,
     DateTime? FirstRaceDate,
     DateTime? LastRaceDate
 );

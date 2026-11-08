@@ -82,7 +82,10 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
 
     [Theory]
     [InlineData(-1.0, 95.0)]
+    [InlineData(501.0, 95.0)]
+    [InlineData(1e308, 95.0)]
     [InlineData(100.0, 150.0)]
+    [InlineData(100.0, 1e308)]
     public async Task SaveRaceResult_OutOfRangeValues_Returns400(double typingSpeed, double accuracy)
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
@@ -91,6 +94,36 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
         var response = await client.PostAsJsonAsync("/api/raceresults", request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(10_001)]
+    [InlineData(int.MaxValue)]
+    public async Task SaveRaceResult_MistakesOutOfRange_Returns400(int mistakes)
+    {
+        var (client, _) = await CreateAuthenticatedClientAsync();
+        var request = CreateRequest() with { Mistakes = mistakes };
+
+        var response = await client.PostAsJsonAsync("/api/raceresults", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SaveRaceResult_MaximumAllowedValues_SavedAndStatisticsStillWork()
+    {
+        var (client, auth) = await CreateAuthenticatedClientAsync();
+        var request = CreateRequest() with { TypingSpeed = 500, Mistakes = 10_000 };
+
+        var first = await client.PostAsJsonAsync("/api/raceresults", request);
+        var second = await client.PostAsJsonAsync("/api/raceresults", request);
+        var stats = await client.GetFromJsonAsync<UserStatisticsDto>($"/api/users/{auth.User.Id}/statistics");
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+        Assert.Equal(500, stats!.BestTypingSpeed);
+        Assert.Equal(20_000, stats.TotalMistakes);
     }
 
     [Theory]

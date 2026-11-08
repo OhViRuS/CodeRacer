@@ -54,7 +54,7 @@ public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceR
                 g.Average(r => r.Accuracy),
                 g.Max(r => r.TypingSpeed),
                 g.Min(r => r.CompletionTime),
-                g.Sum(r => r.Mistakes),
+                g.Sum(r => (long)r.Mistakes), // 64-bit: many capped races must still not overflow
                 g.Min(r => r.CreatedAt),
                 g.Max(r => r.CreatedAt)))
             .SingleOrDefaultAsync(cancellationToken);

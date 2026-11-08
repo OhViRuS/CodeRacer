@@ -9,7 +9,7 @@ public record RaceStatistics(
     double AverageAccuracy,
     double BestTypingSpeed,
     TimeSpan BestCompletionTime,
-    int TotalMistakes,
+    long TotalMistakes,
     DateTime FirstRaceDate,
     DateTime LastRaceDate
 );

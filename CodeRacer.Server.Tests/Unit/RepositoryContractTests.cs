@@ -388,6 +388,27 @@ public class RepositoryContractTests
     }
 
     [Fact]
+    public async Task RaceResultRepository_GetStatisticsByUserIdAsync_TotalMistakesBeyondIntRange_DoesNotOverflow()
+    {
+        // Arrange - stored rows from before the cap could be this large; the total must still be exact
+        var context = CreateTestDbContext();
+        var repository = new RaceResultRepository(context);
+        var userId = Guid.NewGuid();
+        for (var i = 0; i < 2; i++)
+        {
+            await repository.AddAsync(
+                new RaceResult(TimeSpan.FromSeconds(30), 100, 95) { UserId = userId, Mistakes = int.MaxValue },
+                CancellationToken.None);
+        }
+
+        // Act
+        var stats = await repository.GetStatisticsByUserIdAsync(userId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(2L * int.MaxValue, stats!.TotalMistakes);
+    }
+
+    [Fact]
     public async Task RaceResultRepository_GetStatisticsByUserIdAsync_NoRaces_ReturnsNull()
     {
         // Arrange
