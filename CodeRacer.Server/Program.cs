@@ -1,9 +1,19 @@
+using System.Text;
 using CodeRacer.Server.Data;
 using CodeRacer.Server.Interfaces;
+using CodeRacer.Server.Repositories;
 using CodeRacer.Server.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Optional, git-ignored per-developer overrides (see appsettings.Local.template.json).
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+}
 
 // Add services to the container.
 
@@ -11,6 +21,40 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<CodeRacerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("CodeRacer")));
+
+// Register repositories (scoped: new instance per HTTP request)
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRaceResultRepository, RaceResultRepository>();
+
+// Register services (scoped: new instance per HTTP request)
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRaceResultService, RaceResultService>();
+
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
+if (string.IsNullOrWhiteSpace(jwtSecretKey))
+{
+    throw new InvalidOperationException("JWT SecretKey is not configured (Jwt:SecretKey).");
+}
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "CodeRacer",
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "CodeRacerApp",
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<FileSnippetProvider>();
 builder.Services.AddSingleton<ICodeSnippetRepository>(sp => sp.GetRequiredService<FileSnippetProvider>());
@@ -45,6 +89,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
