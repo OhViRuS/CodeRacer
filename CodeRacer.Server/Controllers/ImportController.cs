@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,10 +20,14 @@ public class ImportController : ControllerBase
     private const long MaxRequestSizeBytes = SourceFileImporter.MaxFileSizeBytes + 64 * 1024;
 
     private readonly ISourceFileImporter _importer;
+    private readonly ISourceSnippetExtractor _snippetExtractor;
 
-    public ImportController(ISourceFileImporter importer)
+    public ImportController(
+        ISourceFileImporter importer,
+        ISourceSnippetExtractor snippetExtractor)
     {
         _importer = importer ?? throw new ArgumentNullException(nameof(importer));
+        _snippetExtractor = snippetExtractor ?? throw new ArgumentNullException(nameof(snippetExtractor));
     }
 
     // GET: /api/import/rules   (supported extensions and maximum file size)
@@ -36,7 +41,9 @@ public class ImportController : ControllerBase
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(MaxRequestSizeBytes)]
-    public async Task<ActionResult<ImportedSourceFile>> Import(IFormFile? file, CancellationToken cancellationToken)
+    public async Task<ActionResult<ImportedSourceFileResult>> Import(
+        IFormFile? file,
+        CancellationToken cancellationToken)
     {
         if (file == null)
         {
@@ -47,7 +54,18 @@ public class ImportController : ControllerBase
         {
             await using Stream stream = file.OpenReadStream();
             ImportedSourceFile imported = await _importer.ImportAsync(file.FileName, stream, cancellationToken);
-            return Ok(imported);
+            IReadOnlyList<ExtractedSourceSnippet> snippets =
+                _snippetExtractor.Extract(imported.Language, imported.Content);
+
+            var result = new ImportedSourceFileResult
+            {
+                FileName = imported.FileName,
+                Language = imported.Language,
+                Content = imported.Content,
+                Snippets = snippets
+            };
+
+            return Ok(result);
         }
         catch (ImportedFileException ex)
         {

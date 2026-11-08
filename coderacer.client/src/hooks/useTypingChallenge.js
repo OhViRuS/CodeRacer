@@ -84,6 +84,14 @@ function useTypingChallenge(snippet) {
         setTypedText(newText);
     }
 
+    function resetChallenge() {
+        setTypedText('');
+        setMistakes(0);
+        setTotalKeystrokes(0);
+        setStartTime(null);
+        setElapsedTime(0);
+    }
+
     return {
         typedText,
         mistakes,
@@ -93,7 +101,8 @@ function useTypingChallenge(snippet) {
         isCorrectSoFar,
         isCompleted,
         correctCharacters,
-        handleTyping
+        handleTyping,
+        resetChallenge
     };
 }
 

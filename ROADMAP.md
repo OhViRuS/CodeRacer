@@ -39,8 +39,8 @@ functionality to the requirements of each lab assignment.
 - [ ] Difficulty and topic filtering.
 - [x] Import source code files with supported extensions (`.cs`, `.cpp`, `.py`, `.js`) and a maximum file size of 5 MB.
 - [X] Validate imported files.
-- [ ] Extract suitable code snippets from imported files.
-- [ ] Generate typing challenges from a user's own code.
+- [x] Extract suitable code snippets from imported files.
+- [x] Generate typing challenges from a user's own code.
 - [ ] Leaderboards.
 
 ### Requirement Coverage
