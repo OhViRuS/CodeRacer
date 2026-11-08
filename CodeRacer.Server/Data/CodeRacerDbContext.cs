@@ -9,6 +9,11 @@ public class CodeRacerDbContext(DbContextOptions<CodeRacerDbContext> options) : 
     public DbSet<CodeSnippet> CodeSnippets => Set<CodeSnippet>();
     public DbSet<RaceResult> RaceResults => Set<RaceResult>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity =>
