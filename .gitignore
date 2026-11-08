@@ -498,5 +498,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Per-developer config overrides (copy appsettings.Local.template.json)
+# Obsolete local config file; keep it out of the repo
 appsettings.Local.json

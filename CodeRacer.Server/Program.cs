@@ -9,12 +9,6 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Optional, git-ignored per-developer overrides (see appsettings.Local.template.json).
-if (builder.Environment.IsDevelopment())
-{
-    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
-}
-
 // Add services to the container.
 
 builder.Services.AddControllers();
