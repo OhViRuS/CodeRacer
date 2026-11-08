@@ -128,6 +128,18 @@ public class AuthenticationServiceTests
 
     #endregion
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("SomePassword123")]
+    public void SimulatePasswordCheck_AnyPassword_DoesNotThrow(string password)
+    {
+        // Act
+        var exception = Record.Exception(() => _authenticationService.SimulatePasswordCheck(password));
+
+        // Assert
+        Assert.Null(exception);
+    }
+
     #region Token Generation Tests
 
     [Fact]

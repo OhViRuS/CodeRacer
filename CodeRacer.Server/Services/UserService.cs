@@ -33,7 +33,13 @@ public class UserService(
             return null;
         }
 
-        if (GuestAccount.IsReservedUserName(request.UserName))
+        // '@' is kept out of usernames so a username can never shadow another account's email at login.
+        if (request.UserName.Contains('@'))
+        {
+            return null;
+        }
+
+        if (GuestAccount.IsReservedUserName(request.UserName) || GuestAccount.IsReservedEmail(request.Email))
         {
             return null;
         }
@@ -88,11 +94,28 @@ public class UserService(
             return null;
         }
 
-        var user = await _userRepository.FindByUserNameAsync(request.UserNameOrEmail, cancellationToken);
-        user ??= await _userRepository.FindByEmailAsync(request.UserNameOrEmail, cancellationToken);
+        var identifier = request.UserNameOrEmail;
+        User? user;
+        if (identifier.Contains('@'))
+        {
+            user = await _userRepository.FindByEmailAsync(identifier, cancellationToken);
+            user ??= await _userRepository.FindByUserNameAsync(identifier, cancellationToken);
+        }
+        else
+        {
+            user = await _userRepository.FindByUserNameAsync(identifier, cancellationToken);
+            user ??= await _userRepository.FindByEmailAsync(identifier, cancellationToken);
+        }
 
-        if (user == null
-            || user.Id == GuestAccount.Id
+        if (user == null)
+        {
+            // Spend the same time as a real password check, so response times don't reveal
+            // which usernames and emails have accounts.
+            _authenticationService.SimulatePasswordCheck(request.Password);
+            return null;
+        }
+
+        if (user.Id == GuestAccount.Id
             || !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
         {
             return null;

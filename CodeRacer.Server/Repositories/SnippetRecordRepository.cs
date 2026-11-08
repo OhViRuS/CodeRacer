@@ -1,7 +1,6 @@
 using CodeRacer.Server.Data;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace CodeRacer.Server.Repositories;
 
@@ -10,15 +9,9 @@ namespace CodeRacer.Server.Repositories;
 /// </summary>
 public class SnippetRecordRepository(CodeRacerDbContext context) : Repository<CodeSnippet>(context), ISnippetRecordRepository
 {
-    public async Task EnsureExistsAsync(CodeSnippet snippet, CancellationToken cancellationToken)
+    public Task EnsureExistsAsync(CodeSnippet snippet, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(snippet);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (await ExistsAsync(snippet.Id, cancellationToken))
-        {
-            return;
-        }
 
         // Insert a copy: the original belongs to the singleton file cache and must not be tracked here.
         var record = new CodeSnippet
@@ -30,26 +23,6 @@ public class SnippetRecordRepository(CodeRacerDbContext context) : Repository<Co
             ProgrammingConcept = snippet.ProgrammingConcept
         };
 
-        DbSet.Add(record);
-        try
-        {
-            await Context.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            // Another request inserted the same snippet between the check and the insert.
-            if (!await ExistsAsync(snippet.Id, cancellationToken))
-            {
-                throw;
-            }
-        }
-        finally
-        {
-            // Never leave the record tracked: after a failed insert it would be retried on the next save.
-            Context.Entry(record).State = EntityState.Detached;
-        }
+        return AddIfMissingAsync(record, s => s.Id == snippet.Id, cancellationToken);
     }
-
-    private Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken) =>
-        DbSet.AsNoTracking().AnyAsync(s => s.Id == id, cancellationToken);
 }

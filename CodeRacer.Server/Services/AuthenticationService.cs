@@ -18,6 +18,10 @@ public class AuthenticationService(IOptions<JwtOptions> jwtOptions, TimeProvider
 {
     private const int BcryptWorkFactor = 12; // Balance between security and performance
 
+    // Hashed once, on first use, with the same work factor as real passwords.
+    private static readonly Lazy<string> DummyHash =
+        new(() => BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString(), BcryptWorkFactor));
+
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
     private readonly TimeProvider _timeProvider = timeProvider;
 
@@ -46,6 +50,11 @@ public class AuthenticationService(IOptions<JwtOptions> jwtOptions, TimeProvider
         {
             return false;
         }
+    }
+
+    public void SimulatePasswordCheck(string password)
+    {
+        BCrypt.Net.BCrypt.Verify(string.IsNullOrEmpty(password) ? " " : password, DummyHash.Value);
     }
 
     public AuthenticationToken GenerateToken(Guid userId, string userName)

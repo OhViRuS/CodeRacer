@@ -104,6 +104,42 @@ public class Repository<T>(CodeRacerDbContext context) : IRepository<T> where T 
     }
 
     /// <summary>
+    /// Inserts <paramref name="entity"/> unless a row matching <paramref name="alreadyExists"/> is there.
+    /// Safe under concurrent requests: if another request inserts first, the failed insert is ignored
+    /// once the row is confirmed to exist. The entity is never left tracked, so a failed insert is not
+    /// retried by a later SaveChanges.
+    /// </summary>
+    protected async Task AddIfMissingAsync(
+        T entity,
+        Expression<Func<T, bool>> alreadyExists,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (await DbSet.AsNoTracking().AnyAsync(alreadyExists, cancellationToken))
+        {
+            return;
+        }
+
+        DbSet.Add(entity);
+        try
+        {
+            await Context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            if (!await DbSet.AsNoTracking().AnyAsync(alreadyExists, cancellationToken))
+            {
+                throw;
+            }
+        }
+        finally
+        {
+            Context.Entry(entity).State = EntityState.Detached;
+        }
+    }
+
+    /// <summary>
     /// Helper method to extract primary key from entity.
     /// Works with Id property (Guid or other types).
     /// </summary>

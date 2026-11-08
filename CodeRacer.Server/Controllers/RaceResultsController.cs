@@ -3,6 +3,7 @@ using CodeRacer.Server.Extensions;
 using CodeRacer.Server.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Net.Http.Headers;
 
 namespace CodeRacer.Server.Controllers;
@@ -132,15 +133,16 @@ public class RaceResultsController(IRaceResultService raceResultService) : Contr
     }
 
     /// <summary>
-    /// Gets race results for a specific date range. Dates without a time zone are treated as UTC.
+    /// Gets race results for a specific date range. Both dates are required; dates without a time zone
+    /// are treated as UTC, and a 'to' without a time of day (e.g. 2026-01-15) includes that whole day.
     /// Returns 200 (OK) with list of race results,
     /// 400 (Bad Request) if date range is invalid,
     /// 401 (Unauthorized) if not authenticated.
     /// </summary>
     [HttpGet("by-date-range")]
     public async Task<ActionResult<IReadOnlyList<RaceResultDto>>> GetRaceResultsByDateRange(
-        [FromQuery] DateTime from,
-        [FromQuery] DateTime to,
+        [FromQuery, BindRequired] DateTime from,
+        [FromQuery, BindRequired] DateTime to,
         CancellationToken cancellationToken)
     {
         if (!User.TryGetUserId(out var userId))
@@ -149,7 +151,7 @@ public class RaceResultsController(IRaceResultService raceResultService) : Contr
         }
 
         var fromUtc = from.AsUtc();
-        var toUtc = to.AsUtc();
+        var toUtc = (to.TimeOfDay == TimeSpan.Zero ? to.AddDays(1).AddTicks(-1) : to).AsUtc();
         if (fromUtc > toUtc)
         {
             return BadRequest(new { message = "'from' date must be before 'to' date." });

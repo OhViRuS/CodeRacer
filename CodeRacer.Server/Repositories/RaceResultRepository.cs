@@ -1,6 +1,7 @@
 using CodeRacer.Server.Data;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CodeRacer.Server.Repositories;
 
@@ -38,4 +39,24 @@ public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceR
             r => r.CreatedAt,
             take: count,
             cancellationToken);
+
+    public async Task<RaceStatistics?> GetStatisticsByUserIdAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await DbSet
+            .AsNoTracking()
+            .Where(r => r.UserId == userId)
+            .GroupBy(r => r.UserId)
+            .Select(g => new RaceStatistics(
+                g.Count(),
+                g.Average(r => r.TypingSpeed),
+                g.Average(r => r.Accuracy),
+                g.Max(r => r.TypingSpeed),
+                g.Min(r => r.CompletionTime),
+                g.Sum(r => r.Mistakes),
+                g.Min(r => r.CreatedAt),
+                g.Max(r => r.CreatedAt)))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
 }

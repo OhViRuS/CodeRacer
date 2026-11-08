@@ -8,7 +8,8 @@ namespace CodeRacer.Server.Tests.Unit;
 
 /// <summary>
 /// Unit tests for UserStatisticsService.
-/// Uses NSubstitute to stub the user and race result repositories.
+/// The aggregation itself runs in the database (see RepositoryContractTests); these tests check
+/// how the service turns the repository's figures into the response.
 /// </summary>
 public class UserStatisticsServiceTests
 {
@@ -26,32 +27,26 @@ public class UserStatisticsServiceTests
     }
 
     [Fact]
-    public async Task GetUserStatisticsAsync_UserWithRaces_ReturnsCorrectStatistics()
+    public async Task GetUserStatisticsAsync_UserWithRaces_MapsRepositoryFigures()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, UserName = "testuser", Email = "test@example.com" };
-        var raceResults = new List<RaceResult>
-        {
-            new() { Id = Guid.NewGuid(), UserId = userId, CompletionTime = TimeSpan.FromSeconds(30), TypingSpeed = 100, Accuracy = 95, Mistakes = 2, CreatedAt = Now.AddDays(-2) },
-            new() { Id = Guid.NewGuid(), UserId = userId, CompletionTime = TimeSpan.FromSeconds(25), TypingSpeed = 120, Accuracy = 96, Mistakes = 1, CreatedAt = Now.AddDays(-1) },
-            new() { Id = Guid.NewGuid(), UserId = userId, CompletionTime = TimeSpan.FromSeconds(20), TypingSpeed = 150, Accuracy = 98, Mistakes = 0, CreatedAt = Now }
-        };
-
-        _userRepository.GetByIdAsync(userId, Cancellation).Returns(user);
-        _raceResultRepository.GetByUserIdAsync(userId, Cancellation).Returns(raceResults);
+        _userRepository.GetByIdAsync(userId, Cancellation).Returns(new User { Id = userId, UserName = "testuser" });
+        var figures = new RaceStatistics(3, 123.33, 96.33, 150, TimeSpan.FromSeconds(20), 3, Now.AddDays(-2), Now);
+        _raceResultRepository.GetStatisticsByUserIdAsync(userId, Cancellation).Returns(figures);
 
         // Act
         var result = await _statisticsService.GetUserStatisticsAsync(userId, Cancellation);
 
         // Assert
         Assert.NotNull(result);
+        Assert.Equal(userId, result.UserId);
         Assert.Equal(3, result.TotalRaces);
-        Assert.Equal(123.33, result.AverageTypingSpeed, 2); // (100 + 120 + 150) / 3
-        Assert.Equal(96.33, result.AverageAccuracy, 2); // (95 + 96 + 98) / 3
+        Assert.Equal(123.33, result.AverageTypingSpeed);
+        Assert.Equal(96.33, result.AverageAccuracy);
         Assert.Equal(150, result.BestTypingSpeed);
         Assert.Equal(TimeSpan.FromSeconds(20), result.BestCompletionTime);
-        Assert.Equal(3, result.TotalMistakes); // 2 + 1 + 0
+        Assert.Equal(3, result.TotalMistakes);
         Assert.Equal(Now.AddDays(-2), result.FirstRaceDate);
         Assert.Equal(Now, result.LastRaceDate);
     }
@@ -61,10 +56,8 @@ public class UserStatisticsServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, UserName = "testuser", Email = "test@example.com" };
-
-        _userRepository.GetByIdAsync(userId, Cancellation).Returns(user);
-        _raceResultRepository.GetByUserIdAsync(userId, Cancellation).Returns(new List<RaceResult>());
+        _userRepository.GetByIdAsync(userId, Cancellation).Returns(new User { Id = userId, UserName = "testuser" });
+        _raceResultRepository.GetStatisticsByUserIdAsync(userId, Cancellation).Returns((RaceStatistics?)null);
 
         // Act
         var result = await _statisticsService.GetUserStatisticsAsync(userId, Cancellation);
@@ -92,7 +85,7 @@ public class UserStatisticsServiceTests
 
         // Assert
         Assert.Null(result);
-        await _raceResultRepository.DidNotReceiveWithAnyArgs().GetByUserIdAsync(default, default);
+        await _raceResultRepository.DidNotReceiveWithAnyArgs().GetStatisticsByUserIdAsync(default, default);
     }
 
     [Fact]

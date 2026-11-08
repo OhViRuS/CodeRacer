@@ -78,6 +78,49 @@ public class UsersControllerIntegrationTests : IClassFixture<CodeRacerWebApplica
     }
 
     [Fact]
+    public async Task Register_UserNameWithAt_Returns400()
+    {
+        // Arrange
+        var request = new RegisterUserRequest("alice@example.com", "a" + Guid.NewGuid().ToString()[..8] + "@example.com", "ValidPassword123!", "ValidPassword123!");
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/users/register", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Register_ReservedGuestEmail_Returns400()
+    {
+        // Arrange
+        var request = new RegisterUserRequest("u" + Guid.NewGuid().ToString()[..8], "guest@coderacer.local", "ValidPassword123!", "ValidPassword123!");
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/users/register", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Register_SameNameDifferentCase_Returns400()
+    {
+        // Arrange
+        var name = "CaseUser" + Guid.NewGuid().ToString()[..8];
+        var first = new RegisterUserRequest(name, "c1" + Guid.NewGuid().ToString()[..8] + "@example.com", "ValidPassword123!", "ValidPassword123!");
+        var second = new RegisterUserRequest(name.ToLowerInvariant(), "c2" + Guid.NewGuid().ToString()[..8] + "@example.com", "ValidPassword123!", "ValidPassword123!");
+
+        // Act
+        var firstResponse = await _client.PostAsJsonAsync("/api/users/register", first);
+        var secondResponse = await _client.PostAsJsonAsync("/api/users/register", second);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, secondResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task Register_ReservedGuestName_Returns400()
     {
         // Arrange

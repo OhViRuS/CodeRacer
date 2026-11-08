@@ -93,6 +93,42 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("00:00:00")]
+    [InlineData("-00:00:30")]
+    public async Task SaveRaceResult_NonPositiveCompletionTime_Returns400(string completionTime)
+    {
+        var (client, _) = await CreateAuthenticatedClientAsync();
+        var request = CreateRequest() with { CompletionTime = TimeSpan.Parse(completionTime) };
+
+        var response = await client.PostAsJsonAsync("/api/raceresults", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRaceResultsByDateRange_DateOnlyTo_IncludesRacesFromThatDay()
+    {
+        var (client, _) = await CreateAuthenticatedClientAsync();
+        await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+        var results = await client.GetFromJsonAsync<List<RaceResultDto>>(
+            $"/api/raceresults/by-date-range?from={today}&to={today}");
+
+        Assert.Single(results!);
+    }
+
+    [Fact]
+    public async Task GetRaceResultsByDateRange_MissingTo_Returns400()
+    {
+        var (client, _) = await CreateAuthenticatedClientAsync();
+
+        var response = await client.GetAsync("/api/raceresults/by-date-range?from=2026-01-01");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     [Fact]
     public async Task GetRecentRaceResults_NoCount_ReturnsUpToTen()
     {

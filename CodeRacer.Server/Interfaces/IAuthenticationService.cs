@@ -16,6 +16,12 @@ public interface IAuthenticationService
     bool VerifyPassword(string password, string hash);
 
     /// <summary>
+    /// Does the same amount of work as <see cref="VerifyPassword"/> without any account,
+    /// so a login for an unknown user takes as long as one with a wrong password.
+    /// </summary>
+    void SimulatePasswordCheck(string password);
+
+    /// <summary>
     /// Generates a signed JWT for the user, valid for the configured duration.
     /// Returns the token together with its expiry time.
     /// </summary>

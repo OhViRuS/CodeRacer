@@ -193,7 +193,7 @@ public class RaceResultsControllerTests
     }
 
     [Fact]
-    public async Task GetRaceResultsByDateRange_DatesWithoutTimeZone_PassesUtcDatesToService()
+    public async Task GetRaceResultsByDateRange_DateOnlyRange_PassesUtcDatesCoveringWholeToDay()
     {
         // Arrange - query-string dates arrive with DateTimeKind.Unspecified, which PostgreSQL rejects
         var from = new DateTime(2026, 1, 1);
@@ -209,7 +209,7 @@ public class RaceResultsControllerTests
         await _service.Received(1).GetRaceResultsByDateRangeAsync(
             _userId,
             Arg.Is<DateTime>(d => d == from && d.Kind == DateTimeKind.Utc),
-            Arg.Is<DateTime>(d => d == to && d.Kind == DateTimeKind.Utc),
+            Arg.Is<DateTime>(d => d == to.AddDays(1).AddTicks(-1) && d.Kind == DateTimeKind.Utc),
             Arg.Any<CancellationToken>());
     }
 

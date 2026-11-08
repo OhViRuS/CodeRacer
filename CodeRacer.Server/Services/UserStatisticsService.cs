@@ -4,7 +4,8 @@ using CodeRacer.Server.Interfaces;
 namespace CodeRacer.Server.Services;
 
 /// <summary>
-/// Calculates statistics over a user's race results with LINQ to Objects.
+/// Builds a user's statistics. The figures are aggregated by the database, so the cost
+/// does not grow with the number of races (the shared guest account can have very many).
 /// </summary>
 public class UserStatisticsService(
     IUserRepository userRepository,
@@ -23,8 +24,8 @@ public class UserStatisticsService(
             return null;
         }
 
-        var raceResults = await _raceResultRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (raceResults.Count == 0)
+        var statistics = await _raceResultRepository.GetStatisticsByUserIdAsync(userId, cancellationToken);
+        if (statistics == null)
         {
             return new UserStatisticsDto(
                 userId,
@@ -41,14 +42,14 @@ public class UserStatisticsService(
 
         return new UserStatisticsDto(
             userId,
-            TotalRaces: raceResults.Count,
-            AverageTypingSpeed: raceResults.Average(r => r.TypingSpeed),
-            AverageAccuracy: raceResults.Average(r => r.Accuracy),
-            BestTypingSpeed: raceResults.Max(r => r.TypingSpeed),
-            BestCompletionTime: raceResults.Min(r => r.CompletionTime),
-            TotalMistakes: raceResults.Sum(r => r.Mistakes),
-            FirstRaceDate: raceResults.Min(r => r.CreatedAt),
-            LastRaceDate: raceResults.Max(r => r.CreatedAt)
+            statistics.TotalRaces,
+            statistics.AverageTypingSpeed,
+            statistics.AverageAccuracy,
+            statistics.BestTypingSpeed,
+            statistics.BestCompletionTime,
+            statistics.TotalMistakes,
+            statistics.FirstRaceDate,
+            statistics.LastRaceDate
         );
     }
 }

@@ -162,6 +162,36 @@ public class UserServiceTests
     }
 
     [Theory]
+    [InlineData("guest@coderacer.local")]
+    [InlineData(" GUEST@CodeRacer.Local ")]
+    public async Task RegisterAsync_ReservedGuestEmail_ReturnsNullWithoutSaving(string email)
+    {
+        // Arrange - a real account holding this email would stop the guest account from being created
+        var request = new RegisterUserRequest("someone", email, "ValidPass123", "ValidPass123");
+
+        // Act
+        var result = await _userService.RegisterAsync(request, Cancellation);
+
+        // Assert
+        Assert.Null(result);
+        Assert.Empty(_userRepository.ReceivedCalls());
+    }
+
+    [Fact]
+    public async Task RegisterAsync_UserNameContainsAt_ReturnsNullWithoutSaving()
+    {
+        // Arrange - such a username could shadow another account's email at login
+        var request = new RegisterUserRequest("alice@example.com", "mallory@example.com", "ValidPass123", "ValidPass123");
+
+        // Act
+        var result = await _userService.RegisterAsync(request, Cancellation);
+
+        // Assert
+        Assert.Null(result);
+        Assert.Empty(_userRepository.ReceivedCalls());
+    }
+
+    [Theory]
     [InlineData("Guest")]
     [InlineData("guest")]
     [InlineData(" GUEST ")]
@@ -181,6 +211,40 @@ public class UserServiceTests
     #endregion
 
     #region Login Tests
+
+    [Fact]
+    public async Task LoginAsync_IdentifierWithAt_LooksUpEmailFirst()
+    {
+        // Arrange
+        var request = new LoginRequest("alice@example.com", "password123");
+        var alice = new User { Id = Guid.NewGuid(), UserName = "alice", Email = "alice@example.com", PasswordHash = "hash" };
+        _userRepository.FindByEmailAsync(request.UserNameOrEmail, Cancellation).Returns(alice);
+        _authenticationService.VerifyPassword(request.Password, alice.PasswordHash).Returns(true);
+        _authenticationService.GenerateToken(alice.Id, alice.UserName).Returns(Token);
+
+        // Act
+        var result = await _userService.LoginAsync(request, Cancellation);
+
+        // Assert
+        Assert.Equal(alice.Id, result!.User.Id);
+        await _userRepository.DidNotReceiveWithAnyArgs().FindByUserNameAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task LoginAsync_UnknownUser_StillSpendsPasswordCheckTime()
+    {
+        // Arrange
+        var request = new LoginRequest("nobody", "password123");
+        _userRepository.FindByUserNameAsync(request.UserNameOrEmail, Cancellation).Returns((User?)null);
+        _userRepository.FindByEmailAsync(request.UserNameOrEmail, Cancellation).Returns((User?)null);
+
+        // Act
+        var result = await _userService.LoginAsync(request, Cancellation);
+
+        // Assert - same bcrypt cost as a wrong password, so timing doesn't reveal unknown accounts
+        Assert.Null(result);
+        _authenticationService.Received(1).SimulatePasswordCheck(request.Password);
+    }
 
     [Fact]
     public async Task LoginAsync_GuestAccount_ReturnsNull()

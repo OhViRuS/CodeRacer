@@ -33,15 +33,8 @@ public class UserRepository(CodeRacerDbContext context) : Repository<User>(conte
         }
     }
 
-    public async Task EnsureGuestUserAsync(CancellationToken cancellationToken)
+    public Task EnsureGuestUserAsync(CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (await GuestExistsAsync(cancellationToken))
-        {
-            return;
-        }
-
         var guest = new User
         {
             Id = GuestAccount.Id,
@@ -51,23 +44,7 @@ public class UserRepository(CodeRacerDbContext context) : Repository<User>(conte
             CreatedAt = DateTime.UnixEpoch
         };
 
-        DbSet.Add(guest);
-        try
-        {
-            await Context.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            // Another request created the guest between the check and the insert.
-            if (!await GuestExistsAsync(cancellationToken))
-            {
-                throw;
-            }
-        }
-        finally
-        {
-            Context.Entry(guest).State = EntityState.Detached;
-        }
+        return AddIfMissingAsync(guest, u => u.Id == GuestAccount.Id, cancellationToken);
     }
 
     public async Task<User?> FindByUserNameAsync(string userName, CancellationToken cancellationToken)
@@ -92,9 +69,6 @@ public class UserRepository(CodeRacerDbContext context) : Repository<User>(conte
         return await DbSet
             .AnyAsync(u => u.UserName.ToLower() == userName.ToLower(), cancellationToken);
     }
-
-    private Task<bool> GuestExistsAsync(CancellationToken cancellationToken) =>
-        DbSet.AsNoTracking().AnyAsync(u => u.Id == GuestAccount.Id, cancellationToken);
 
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken)
     {

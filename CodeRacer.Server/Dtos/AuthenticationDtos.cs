@@ -8,7 +8,7 @@ namespace CodeRacer.Server.Dtos;
 /// The attributes give clients field-level 400 errors; UserService repeats the checks.
 /// </summary>
 public record RegisterUserRequest(
-    [Required, StringLength(50, MinimumLength = 1)] string UserName,
+    [Required, StringLength(50, MinimumLength = 1), RegularExpression("^[^@]+$", ErrorMessage = "Username cannot contain '@'.")] string UserName,
     [Required, EmailAddress, StringLength(320)] string Email,
     [Required, MinLength(8)] string Password,
     [Required] string ConfirmPassword
@@ -74,7 +74,7 @@ public record RaceResultDto(
 /// </summary>
 public record SaveRaceResultRequest(
     Guid CodeSnippetId,
-    TimeSpan CompletionTime,
+    [Range(typeof(TimeSpan), "00:00:00.001", "1.00:00:00", ErrorMessage = "Completion time must be positive and less than a day.")] TimeSpan CompletionTime,
     [Range(0, double.MaxValue)] double TypingSpeed,
     [Range(0, 100)] double Accuracy,
     [Range(0, int.MaxValue)] int Mistakes

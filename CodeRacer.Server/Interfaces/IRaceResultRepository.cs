@@ -24,4 +24,10 @@ public interface IRaceResultRepository : IRepository<RaceResult>
         Guid userId,
         int count,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Calculates a user's race statistics in the database without loading their results.
+    /// Returns null when the user has no races.
+    /// </summary>
+    Task<RaceStatistics?> GetStatisticsByUserIdAsync(Guid userId, CancellationToken cancellationToken);
 }

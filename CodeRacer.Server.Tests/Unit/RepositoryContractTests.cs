@@ -353,6 +353,54 @@ public class RepositoryContractTests
     }
 
     [Fact]
+    public async Task RaceResultRepository_GetStatisticsByUserIdAsync_AggregatesOnlyThatUser()
+    {
+        // Arrange
+        var context = CreateTestDbContext();
+        var repository = new RaceResultRepository(context);
+        var userId = Guid.NewGuid();
+        var start = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var races = new[]
+        {
+            new RaceResult(TimeSpan.FromSeconds(30), 100, 95) { UserId = userId, Mistakes = 2, CreatedAt = start },
+            new RaceResult(TimeSpan.FromSeconds(25), 120, 96) { UserId = userId, Mistakes = 1, CreatedAt = start.AddDays(1) },
+            new RaceResult(TimeSpan.FromSeconds(20), 150, 98) { UserId = userId, Mistakes = 0, CreatedAt = start.AddDays(2) },
+            new RaceResult(TimeSpan.FromSeconds(5), 999, 100) { UserId = Guid.NewGuid(), Mistakes = 0, CreatedAt = start }
+        };
+        foreach (var race in races)
+        {
+            await repository.AddAsync(race, CancellationToken.None);
+        }
+
+        // Act
+        var stats = await repository.GetStatisticsByUserIdAsync(userId, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(stats);
+        Assert.Equal(3, stats.TotalRaces);
+        Assert.Equal(123.33, stats.AverageTypingSpeed, 2);
+        Assert.Equal(96.33, stats.AverageAccuracy, 2);
+        Assert.Equal(150, stats.BestTypingSpeed);
+        Assert.Equal(TimeSpan.FromSeconds(20), stats.BestCompletionTime);
+        Assert.Equal(3, stats.TotalMistakes);
+        Assert.Equal(start, stats.FirstRaceDate);
+        Assert.Equal(start.AddDays(2), stats.LastRaceDate);
+    }
+
+    [Fact]
+    public async Task RaceResultRepository_GetStatisticsByUserIdAsync_NoRaces_ReturnsNull()
+    {
+        // Arrange
+        var repository = new RaceResultRepository(CreateTestDbContext());
+
+        // Act
+        var stats = await repository.GetStatisticsByUserIdAsync(Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Null(stats);
+    }
+
+    [Fact]
     public async Task FindOrderedDescendingAsync_OtherKeyType_SortsByThatKeyAndTakesTop()
     {
         // Arrange - the generic method sorted by typing speed (double) instead of a date
