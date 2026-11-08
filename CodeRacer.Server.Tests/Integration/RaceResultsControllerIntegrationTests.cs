@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CodeRacer.Server.Dtos;
 using CodeRacer.Server.Interfaces;
+using CodeRacer.Server.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CodeRacer.Server.Tests.Integration;
@@ -118,13 +119,29 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     }
 
     [Fact]
-    public async Task SaveRaceResult_NoAuth_Returns401()
+    public async Task SaveRaceResult_NoAuth_SavesAsGuest()
     {
         var client = _factory.CreateClient();
 
+        var first = await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+        var second = await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+        var result = await first.Content.ReadFromJsonAsync<RaceResultDto>();
+        Assert.Equal(GuestAccount.Id, result!.UserId);
+    }
+
+    [Fact]
+    public async Task SaveRaceResult_SignedIn_SavesToOwnAccountNotGuest()
+    {
+        var (client, auth) = await CreateAuthenticatedClientAsync();
+
         var response = await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<RaceResultDto>();
+        Assert.Equal(auth.User.Id, result!.UserId);
+        Assert.NotEqual(GuestAccount.Id, result.UserId);
     }
 
     [Fact]

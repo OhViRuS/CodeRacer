@@ -22,4 +22,10 @@ public interface IUserRepository : IRepository<User>
 
     /// <summary>Checks if an email already exists (case-insensitive).</summary>
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Creates the shared <see cref="GuestAccount"/> user if it does not exist yet.
+    /// Safe to call concurrently.
+    /// </summary>
+    Task EnsureGuestUserAsync(CancellationToken cancellationToken);
 }

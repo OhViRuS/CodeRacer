@@ -22,6 +22,15 @@ public static class ControllerTestHelpers
         return controller.WithUser(new ClaimsPrincipal(new ClaimsIdentity()));
     }
 
+    /// <summary>A request that sent a bearer token which failed authentication (e.g. expired).</summary>
+    public static T WithRejectedToken<T>(this T controller)
+        where T : ControllerBase
+    {
+        controller.WithUser(new ClaimsPrincipal(new ClaimsIdentity()));
+        controller.ControllerContext.HttpContext.Request.Headers.Authorization = "Bearer expired-or-invalid";
+        return controller;
+    }
+
     private static T WithUser<T>(this T controller, ClaimsPrincipal user)
         where T : ControllerBase
     {

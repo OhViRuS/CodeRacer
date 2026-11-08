@@ -9,21 +9,24 @@ namespace CodeRacer.Server.Services;
 /// Coordinates race result persistence and retrieval.
 /// Uses IRaceResultRepository for data access, and makes sure the raced snippet
 /// (loaded from snippets.json) also exists in the database before a result references it.
+/// Results of players who are not signed in are saved under the shared <see cref="GuestAccount"/>.
 /// Every method checks the cancellation token first, so a cancelled request does no work.
 /// </summary>
 public class RaceResultService(
     IRaceResultRepository raceResultRepository,
     ICodeSnippetProvider snippetProvider,
     ISnippetRecordRepository snippetRecordRepository,
+    IUserRepository userRepository,
     TimeProvider timeProvider) : IRaceResultService
 {
     private readonly IRaceResultRepository _raceResultRepository = raceResultRepository;
     private readonly ICodeSnippetProvider _snippetProvider = snippetProvider;
     private readonly ISnippetRecordRepository _snippetRecordRepository = snippetRecordRepository;
+    private readonly IUserRepository _userRepository = userRepository;
     private readonly TimeProvider _timeProvider = timeProvider;
 
     public async Task<RaceResultDto?> SaveRaceResultAsync(
-        Guid userId,
+        Guid? userId,
         SaveRaceResultRequest request,
         CancellationToken cancellationToken)
     {
@@ -37,12 +40,17 @@ public class RaceResultService(
 
         await _snippetRecordRepository.EnsureExistsAsync(snippet, cancellationToken);
 
+        if (userId == null)
+        {
+            await _userRepository.EnsureGuestUserAsync(cancellationToken);
+        }
+
         var raceResult = new RaceResult(
             completionTime: request.CompletionTime,
             typingSpeed: request.TypingSpeed,
             accuracy: request.Accuracy)
         {
-            UserId = userId,
+            UserId = userId ?? GuestAccount.Id,
             CodeSnippetId = request.CodeSnippetId,
             Mistakes = request.Mistakes,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime

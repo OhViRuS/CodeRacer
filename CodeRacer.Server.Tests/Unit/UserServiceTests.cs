@@ -161,9 +161,48 @@ public class UserServiceTests
         Assert.Null(result);
     }
 
+    [Theory]
+    [InlineData("Guest")]
+    [InlineData("guest")]
+    [InlineData(" GUEST ")]
+    public async Task RegisterAsync_ReservedGuestName_ReturnsNullWithoutSaving(string userName)
+    {
+        // Arrange
+        var request = new RegisterUserRequest(userName, "someone@example.com", "ValidPass123", "ValidPass123");
+
+        // Act
+        var result = await _userService.RegisterAsync(request, Cancellation);
+
+        // Assert
+        Assert.Null(result);
+        Assert.Empty(_userRepository.ReceivedCalls());
+    }
+
     #endregion
 
     #region Login Tests
+
+    [Fact]
+    public async Task LoginAsync_GuestAccount_ReturnsNull()
+    {
+        // Arrange
+        var guest = new User
+        {
+            Id = GuestAccount.Id,
+            UserName = GuestAccount.UserName,
+            Email = GuestAccount.Email,
+            PasswordHash = GuestAccount.PasswordHash
+        };
+        _userRepository.FindByUserNameAsync(GuestAccount.UserName, Cancellation).Returns(guest);
+        _authenticationService.VerifyPassword(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+        // Act
+        var result = await _userService.LoginAsync(new LoginRequest(GuestAccount.UserName, "anything"), Cancellation);
+
+        // Assert - refused even if the password check were somehow to pass
+        Assert.Null(result);
+        _authenticationService.DidNotReceiveWithAnyArgs().GenerateToken(default, default!);
+    }
 
     [Fact]
     public async Task LoginAsync_CorrectCredentialsByUsername_ReturnsAuthenticationResponse()

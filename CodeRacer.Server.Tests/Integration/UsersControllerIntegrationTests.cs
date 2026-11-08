@@ -78,6 +78,36 @@ public class UsersControllerIntegrationTests : IClassFixture<CodeRacerWebApplica
     }
 
     [Fact]
+    public async Task Register_ReservedGuestName_Returns400()
+    {
+        // Arrange
+        var request = new RegisterUserRequest("Guest", "g" + Guid.NewGuid().ToString()[..8] + "@example.com", "ValidPassword123!", "ValidPassword123!");
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/users/register", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_AsGuestAfterGuestSave_Returns401()
+    {
+        // Arrange - a guest save creates the Guest account
+        var snippetsResponse = await _client.GetFromJsonAsync<List<SnippetIdOnly>>("/api/codesnippets");
+        var save = new SaveRaceResultRequest(snippetsResponse![0].Id, TimeSpan.FromSeconds(30), 80, 95, 1);
+        Assert.Equal(HttpStatusCode.Created, (await _client.PostAsJsonAsync("/api/raceresults", save)).StatusCode);
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/users/login", new LoginRequest("Guest", "GUEST_ACCOUNT"));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    private sealed record SnippetIdOnly(Guid Id);
+
+    [Fact]
     public async Task Register_DuplicateUsername_Returns400()
     {
         // Arrange

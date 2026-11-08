@@ -66,6 +66,24 @@ public class RepositoryContractTests
     #region UserRepository Contract Tests
 
     [Fact]
+    public async Task UserRepository_EnsureGuestUserAsync_CalledTwice_CreatesGuestOnce()
+    {
+        // Arrange
+        var context = CreateTestDbContext();
+        var repository = new UserRepository(context);
+
+        // Act
+        await repository.EnsureGuestUserAsync(CancellationToken.None);
+        await repository.EnsureGuestUserAsync(CancellationToken.None);
+
+        // Assert
+        var guest = await context.Users.AsNoTracking().SingleAsync();
+        Assert.Equal(GuestAccount.Id, guest.Id);
+        Assert.Equal(GuestAccount.UserName, guest.UserName);
+        Assert.Empty(context.ChangeTracker.Entries());
+    }
+
+    [Fact]
     public async Task UserRepository_UpdateAsync_DetachedInstance_PersistsChanges()
     {
         // Arrange

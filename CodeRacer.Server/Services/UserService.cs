@@ -33,6 +33,11 @@ public class UserService(
             return null;
         }
 
+        if (GuestAccount.IsReservedUserName(request.UserName))
+        {
+            return null;
+        }
+
         if (string.IsNullOrWhiteSpace(request.Password)
             || request.Password != request.ConfirmPassword
             || request.Password.Length < MinimumPasswordLength)
@@ -86,7 +91,9 @@ public class UserService(
         var user = await _userRepository.FindByUserNameAsync(request.UserNameOrEmail, cancellationToken);
         user ??= await _userRepository.FindByEmailAsync(request.UserNameOrEmail, cancellationToken);
 
-        if (user == null || !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
+        if (user == null
+            || user.Id == GuestAccount.Id
+            || !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
         {
             return null;
         }

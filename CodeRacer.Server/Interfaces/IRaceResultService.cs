@@ -10,11 +10,12 @@ namespace CodeRacer.Server.Interfaces;
 public interface IRaceResultService
 {
     /// <summary>
-    /// Saves a race result for a user. Returns the saved race result DTO,
+    /// Saves a race result for a user, or for the shared guest account when userId is null
+    /// (a player who is not signed in). Returns the saved race result DTO,
     /// or null if the referenced code snippet does not exist.
     /// </summary>
     Task<RaceResultDto?> SaveRaceResultAsync(
-        Guid userId,
+        Guid? userId,
         SaveRaceResultRequest request,
         CancellationToken cancellationToken);
 

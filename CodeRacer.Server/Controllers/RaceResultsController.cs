@@ -3,13 +3,16 @@ using CodeRacer.Server.Extensions;
 using CodeRacer.Server.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 
 namespace CodeRacer.Server.Controllers;
 
 /// <summary>
 /// API controller for race results.
-/// Handles saving and retrieving typing challenge race results of the signed-in user.
-/// All endpoints require a valid JWT bearer token; request bodies are validated by [ApiController].
+/// Handles saving and retrieving typing challenge race results.
+/// Saving is open to everyone: signed-in players save to their own account, players who are not
+/// signed in save to the shared guest account. Reading and deleting require a valid JWT bearer token.
+/// Request bodies are validated by [ApiController].
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -22,17 +25,30 @@ public class RaceResultsController(IRaceResultService raceResultService) : Contr
     private readonly IRaceResultService _raceResultService = raceResultService;
 
     /// <summary>
-    /// Saves a race result for the current user.
+    /// Saves a race result. The user always comes from the JWT, never from the request body.
+    /// Without an Authorization header the result is saved to the shared guest account.
     /// Returns 201 (Created) with the saved race result,
     /// 400 (Bad Request) if the request is invalid or the code snippet does not exist,
-    /// 401 (Unauthorized) if user is not authenticated.
+    /// 401 (Unauthorized) if a token was sent but is invalid or expired
+    /// (so a signed-in player's result is never silently saved as a guest).
     /// </summary>
     [HttpPost]
+    [AllowAnonymous]
     public async Task<ActionResult<RaceResultDto>> SaveRaceResult(
         [FromBody] SaveRaceResultRequest request,
         CancellationToken cancellationToken)
     {
-        if (!User.TryGetUserId(out var userId))
+        Guid? userId = null;
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            if (!User.TryGetUserId(out var signedInUserId))
+            {
+                return Unauthorized();
+            }
+
+            userId = signedInUserId;
+        }
+        else if (Request.Headers.ContainsKey(HeaderNames.Authorization))
         {
             return Unauthorized();
         }

@@ -78,10 +78,26 @@ public class RaceResultsControllerTests
     }
 
     [Fact]
-    public async Task SaveRaceResult_NoUserIdClaim_ReturnsUnauthorizedWithoutCallingService()
+    public async Task SaveRaceResult_NotSignedIn_SavesAsGuest()
     {
         // Arrange
         var controller = new RaceResultsController(_service).SignedOut();
+        var request = CreateRequest();
+        _service.SaveRaceResultAsync(null, request, Arg.Any<CancellationToken>()).Returns(CreateDto());
+
+        // Act
+        var response = await controller.SaveRaceResult(request, CancellationToken.None);
+
+        // Assert - no user id is passed, so the service uses the guest account
+        Assert.IsType<CreatedAtActionResult>(response.Result);
+        await _service.Received(1).SaveRaceResultAsync(null, request, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SaveRaceResult_RejectedToken_ReturnsUnauthorizedWithoutSavingAsGuest()
+    {
+        // Arrange - a signed-in player whose token expired must not end up saving as a guest
+        var controller = new RaceResultsController(_service).WithRejectedToken();
 
         // Act
         var response = await controller.SaveRaceResult(CreateRequest(), CancellationToken.None);
