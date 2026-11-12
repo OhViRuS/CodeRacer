@@ -2,11 +2,20 @@ import './App.css';
 import { useState } from 'react';
 import TypingChallenge from './components/TypingChallenge';
 import Lobby from './components/Lobby';
+import { useAuth } from './hooks/useAuth';
 
 function App() {
     const [gameLanguage, setGameLanguage] = useState(null);
     const [importedSnippets, setImportedSnippets] = useState([]);
     const [currentSnippetIndex, setCurrentSnippetIndex] = useState(0);
+
+    const {
+        user,
+        isLoading,
+        login,
+        register,
+        logout
+    } = useAuth();
 
     function handleStartImportedChallenge(language, snippets) {
         setImportedSnippets(snippets);
@@ -60,6 +69,11 @@ function App() {
             <Lobby
                 onStartGame={setGameLanguage}
                 onStartImportedChallenge={handleStartImportedChallenge}
+                user={user}
+                isAuthLoading={isLoading}
+                onLogin={login}
+                onRegister={register}
+                onLogout={logout}
             />
         </div>
     );
