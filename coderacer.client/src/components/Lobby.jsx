@@ -6,8 +6,17 @@ import CloseLobbyModal from './CloseLobbyModal';
 import SourceFileImport from './SourceFileImport';
 import useLobby from '../hooks/useLobby';
 import useLanguage from '../hooks/useLanguage';
+import AuthPanel from './AuthPanel';
 
-function Lobby({ onStartGame, onStartImportedChallenge }) {
+function Lobby({
+    onStartGame,
+    onStartImportedChallenge,
+    user,
+    isAuthLoading,
+    onLogin,
+    onRegister,
+    onLogout
+}) {
     const {
         lobby,
         createLobby,
@@ -81,10 +90,25 @@ function Lobby({ onStartGame, onStartImportedChallenge }) {
 
     return (
         <div key="landing" className="screen-enter">
+            <AuthPanel
+                user={user}
+                isLoading={isAuthLoading}
+                onLogin={onLogin}
+                onRegister={onRegister}
+                onLogout={onLogout}
+            />
+
             <div className="button-container">
                 <button
                     className="primary-btn"
-                    onClick={() => setCreateLobbyModalOpen(true)}
+                    onClick={() => {
+                        if (user) {
+                            createLobby(user.userName);
+                            return;
+                        }
+
+                        setCreateLobbyModalOpen(true);
+                    }}
                 >
                     Create Lobby
                 </button>
@@ -107,6 +131,7 @@ function Lobby({ onStartGame, onStartImportedChallenge }) {
                 isOpen={joinLobbyModalOpen}
                 onClose={() => setJoinLobbyModalOpen(false)}
                 onJoin={joinLobby}
+                userName={user?.userName}
             />
         </div>
     );

@@ -190,6 +190,7 @@ th, td {
 /* Button container - for consistent layout */
 .button-container {
     display: flex;
+    justify-content: center;
     gap: 16px;
     margin-top: 20px;
     min-height: 44px;
@@ -396,4 +397,109 @@ th, td {
         transition-duration: 0.01ms !important;
         transition-delay: 0ms !important;
     }
+}
+
+.auth-card {
+    width: min(380px, 90vw);
+    padding: 24px;
+    box-sizing: border-box;
+    background: #1f2937;
+    border: 1px solid rgba(245, 158, 11, 0.55);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    text-align: left;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auth-form h2 {
+    margin: 0 0 4px;
+    color: #f59e0b;
+    text-align: center;
+    font-size: 28px;
+}
+
+.auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #d1d5db;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.auth-field input {
+    width: 100%;
+    padding: 13px 14px;
+    box-sizing: border-box;
+    background: #111827;
+    border: 1px solid #4b5563;
+    border-radius: 6px;
+    color: #f8fafc;
+    font-family: inherit;
+    font-size: 17px;
+}
+
+.auth-field input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+
+.auth-error {
+    margin: 0;
+    padding: 10px 12px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 6px;
+    color: #f87171;
+    font-size: 14px;
+}
+
+.auth-submit {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.auth-link-btn {
+    background: none;
+    border: none;
+    color: #f59e0b;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.auth-link-btn:hover {
+    color: #fbbf24;
+    text-decoration: underline;
+}
+
+.auth-user {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.auth-user strong {
+    display: block;
+    margin-top: 3px;
+    color: #f8fafc;
+    font-size: 18px;
+}
+
+.auth-label,
+.auth-status {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.auth-status {
+    margin: 0;
+    text-align: center;
 }

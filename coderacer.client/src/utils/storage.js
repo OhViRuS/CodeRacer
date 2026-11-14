@@ -1,4 +1,5 @@
 export const STORAGE_KEYS = {
+    AUTH_TOKEN: 'authToken',
     LANGUAGE: 'language',
     LOBBY: 'lobby'
 };
