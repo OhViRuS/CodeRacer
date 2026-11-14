@@ -17,7 +17,10 @@ export function useAuth() {
     );
 
     const [user, setUser] = useState(null);
-    const [isLoading, setIsLoading] = useState(() => Boolean(token));
+    const [isSessionLoading, setIsSessionLoading] = useState(
+        () => Boolean(token)
+    );
+    const [isAuthenticating, setIsAuthenticating] = useState(false);
 
     useEffect(() => {
         if (!token) {
@@ -32,17 +35,30 @@ export function useAuth() {
                 removeStorage(STORAGE_KEYS.AUTH_TOKEN);
             })
             .finally(() => {
-                setIsLoading(false);
+                setIsSessionLoading(false);
             });
     }, [token]);
 
     async function login(userNameOrEmail, password) {
-        const result = await loginUser(userNameOrEmail, password);
+        setIsAuthenticating(true);
 
-        writeStorage(STORAGE_KEYS.AUTH_TOKEN, result.token);
-        setUser(result.user);
+        try {
+            const result = await loginUser(
+                userNameOrEmail,
+                password
+            );
 
-        return result.user;
+            writeStorage(
+                STORAGE_KEYS.AUTH_TOKEN,
+                result.token
+            );
+
+            setUser(result.user);
+
+            return result.user;
+        } finally {
+            setIsAuthenticating(false);
+        }
     }
 
     async function register(
@@ -51,17 +67,27 @@ export function useAuth() {
         password,
         confirmPassword
     ) {
-        const result = await registerUser(
-            userName,
-            email,
-            password,
-            confirmPassword
-        );
+        setIsAuthenticating(true);
 
-        writeStorage(STORAGE_KEYS.AUTH_TOKEN, result.token);
-        setUser(result.user);
+        try {
+            const result = await registerUser(
+                userName,
+                email,
+                password,
+                confirmPassword
+            );
 
-        return result.user;
+            writeStorage(
+                STORAGE_KEYS.AUTH_TOKEN,
+                result.token
+            );
+
+            setUser(result.user);
+
+            return result.user;
+        } finally {
+            setIsAuthenticating(false);
+        }
     }
 
     function logout() {
@@ -71,7 +97,8 @@ export function useAuth() {
 
     return {
         user,
-        isLoading,
+        isSessionLoading,
+        isAuthenticating,
         login,
         register,
         logout

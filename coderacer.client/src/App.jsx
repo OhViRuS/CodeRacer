@@ -11,7 +11,8 @@ function App() {
 
     const {
         user,
-        isLoading,
+        isSessionLoading,
+        isAuthenticating,
         login,
         register,
         logout
@@ -70,7 +71,8 @@ function App() {
                 onStartGame={setGameLanguage}
                 onStartImportedChallenge={handleStartImportedChallenge}
                 user={user}
-                isAuthLoading={isLoading}
+                isSessionLoading={isSessionLoading}
+                isAuthenticating={isAuthenticating}
                 onLogin={login}
                 onRegister={register}
                 onLogout={logout}

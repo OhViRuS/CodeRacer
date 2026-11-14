@@ -58,6 +58,7 @@ function JoinLobbyModal({
                 placeholder="Enter lobby ID"
                 value={lobbyId}
                 onChange={(e) => setLobbyId(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
                 autoFocus
             />
 

@@ -12,7 +12,8 @@ function Lobby({
     onStartGame,
     onStartImportedChallenge,
     user,
-    isAuthLoading,
+    isSessionLoading,
+    isAuthenticating,
     onLogin,
     onRegister,
     onLogout
@@ -92,7 +93,7 @@ function Lobby({
         <div key="landing" className="screen-enter">
             <AuthPanel
                 user={user}
-                isLoading={isAuthLoading}
+                isLoading={isSessionLoading}
                 onLogin={onLogin}
                 onRegister={onRegister}
                 onLogout={onLogout}
@@ -101,6 +102,7 @@ function Lobby({
             <div className="button-container">
                 <button
                     className="primary-btn"
+                    disabled={isSessionLoading || isAuthenticating}
                     onClick={() => {
                         if (user) {
                             createLobby(user.userName);
@@ -115,6 +117,7 @@ function Lobby({
 
                 <button
                     className="primary-btn"
+                    disabled={isSessionLoading || isAuthenticating}
                     onClick={() => setJoinLobbyModalOpen(true)}
                 >
                     Join Lobby
