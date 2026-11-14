@@ -101,7 +101,14 @@ function Lobby({
             <div className="button-container">
                 <button
                     className="primary-btn"
-                    onClick={() => setCreateLobbyModalOpen(true)}
+                    onClick={() => {
+                        if (user) {
+                            createLobby(user.userName);
+                            return;
+                        }
+
+                        setCreateLobbyModalOpen(true);
+                    }}
                 >
                     Create Lobby
                 </button>
@@ -124,6 +131,7 @@ function Lobby({
                 isOpen={joinLobbyModalOpen}
                 onClose={() => setJoinLobbyModalOpen(false)}
                 onJoin={joinLobby}
+                userName={user?.userName}
             />
         </div>
     );

@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import Modal from './Modal';
 
-function JoinLobbyModal({ isOpen, onClose, onJoin }) {
+function JoinLobbyModal({
+    isOpen,
+    onClose,
+    onJoin,
+    userName
+}) {
     const [lobbyId, setLobbyId] = useState('');
     const [name, setName] = useState('');
     const [error, setError] = useState('');
@@ -14,14 +19,14 @@ function JoinLobbyModal({ isOpen, onClose, onJoin }) {
             return;
         }
 
-        const trimmedName = name.trim();
+        const playerName = userName ?? name.trim();
 
-        if (!trimmedName) {
+        if (!playerName) {
             setError('Name cannot be empty. Please enter a name.');
             return;
         }
 
-        onJoin(trimmedId, trimmedName);
+        onJoin(trimmedId, playerName);
 
         setLobbyId('');
         setName('');
@@ -56,13 +61,15 @@ function JoinLobbyModal({ isOpen, onClose, onJoin }) {
                 autoFocus
             />
 
-            <input
-                type="text"
-                placeholder="Enter your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-            />
+            {!userName && (
+                <input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                />
+            )}
 
             <div className="modal-actions">
                 <button
