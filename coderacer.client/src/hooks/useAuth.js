@@ -48,9 +48,7 @@ export function useAuth() {
                 }
             })
             .finally(() => {
-                if (!cancelled) {
-                    setIsSessionLoading(false);
-                }
+                setIsSessionLoading(false);
             });
 
         return () => {

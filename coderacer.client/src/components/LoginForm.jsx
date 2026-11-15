@@ -9,11 +9,18 @@ function LoginForm({ onLogin, onSwitchToRegister }) {
     async function handleSubmit(event) {
         event.preventDefault();
 
+        const trimmedUserNameOrEmail = userNameOrEmail.trim();
+
+        if (!trimmedUserNameOrEmail) {
+            setError('Username or email cannot be empty');
+            return;
+        }
+
         setError('');
         setIsSubmitting(true);
 
         try {
-            await onLogin(userNameOrEmail, password);
+            await onLogin(trimmedUserNameOrEmail, password);
         } catch (error) {
             setError(error.message);
         } finally {

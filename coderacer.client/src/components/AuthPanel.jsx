@@ -30,7 +30,10 @@ function AuthPanel({
                 <button
                     className="secondary-btn"
                     type="button"
-                    onClick={onLogout}
+                    onClick={() => {
+                        setMode('login');
+                        onLogout();
+                    }}
                 >
                     Logout
                 </button>
