@@ -12,27 +12,28 @@ import {
 } from '../utils/storage';
 
 export function useAuth() {
-    const [token, setToken] = useState(() =>
+    const [initialToken] = useState(() =>
         readStorage(STORAGE_KEYS.AUTH_TOKEN)
     );
 
+    const [token, setToken] = useState(initialToken);
     const [user, setUser] = useState(null);
     const [isSessionLoading, setIsSessionLoading] = useState(
-        () => Boolean(token)
+        () => Boolean(initialToken)
     );
     const [isAuthenticating, setIsAuthenticating] = useState(false);
 
     useEffect(() => {
-        if (!token) {
+        if (!initialToken) {
             return;
         }
 
-        fetchCurrentUser(token)
+        fetchCurrentUser(initialToken)
             .then(currentUser => {
                 setUser(currentUser);
             })
             .catch(error => {
-                if (error.status === 401) {
+                if (error.status === 401 || error.status === 404) {
                     removeStorage(STORAGE_KEYS.AUTH_TOKEN);
                     setToken(null);
                     setUser(null);
@@ -41,7 +42,7 @@ export function useAuth() {
             .finally(() => {
                 setIsSessionLoading(false);
             });
-    }, [token]);
+    }, [initialToken]);
 
     async function login(userNameOrEmail, password) {
         setIsAuthenticating(true);
