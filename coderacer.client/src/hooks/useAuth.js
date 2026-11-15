@@ -12,7 +12,7 @@ import {
 } from '../utils/storage';
 
 export function useAuth() {
-    const [token] = useState(() =>
+    const [token, setToken] = useState(() =>
         readStorage(STORAGE_KEYS.AUTH_TOKEN)
     );
 
@@ -31,8 +31,12 @@ export function useAuth() {
             .then(currentUser => {
                 setUser(currentUser);
             })
-            .catch(() => {
-                removeStorage(STORAGE_KEYS.AUTH_TOKEN);
+            .catch(error => {
+                if (error.status === 401) {
+                    removeStorage(STORAGE_KEYS.AUTH_TOKEN);
+                    setToken(null);
+                    setUser(null);
+                }
             })
             .finally(() => {
                 setIsSessionLoading(false);
@@ -53,6 +57,7 @@ export function useAuth() {
                 result.token
             );
 
+            setToken(result.token);
             setUser(result.user);
 
             return result.user;
@@ -82,6 +87,7 @@ export function useAuth() {
                 result.token
             );
 
+            setToken(result.token);
             setUser(result.user);
 
             return result.user;
@@ -92,10 +98,12 @@ export function useAuth() {
 
     function logout() {
         removeStorage(STORAGE_KEYS.AUTH_TOKEN);
+        setToken(null);
         setUser(null);
     }
 
     return {
+        token,
         user,
         isSessionLoading,
         isAuthenticating,
