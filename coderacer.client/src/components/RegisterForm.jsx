@@ -11,6 +11,19 @@ function RegisterForm({ onRegister, onSwitchToLogin }) {
     async function handleSubmit(event) {
         event.preventDefault();
 
+        const trimmedUserName = userName.trim();
+        const trimmedEmail = email.trim();
+
+        if (!trimmedUserName) {
+            setError('Username cannot be empty');
+            return;
+        }
+
+        if (!trimmedEmail) {
+            setError('Email cannot be empty');
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
@@ -21,8 +34,8 @@ function RegisterForm({ onRegister, onSwitchToLogin }) {
 
         try {
             await onRegister(
-                userName,
-                email,
+                trimmedUserName,
+                trimmedEmail,
                 password,
                 confirmPassword
             );

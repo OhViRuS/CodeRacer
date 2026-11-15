@@ -24,15 +24,23 @@ export function useAuth() {
     const [isAuthenticating, setIsAuthenticating] = useState(false);
 
     useEffect(() => {
-        if (!initialToken) {
+        if (!initialToken || token !== initialToken) {
             return;
         }
 
+        let cancelled = false;
+
         fetchCurrentUser(initialToken)
             .then(currentUser => {
-                setUser(currentUser);
+                if (!cancelled) {
+                    setUser(currentUser);
+                }
             })
             .catch(error => {
+                if (cancelled) {
+                    return;
+                }
+
                 if (error.status === 401 || error.status === 404) {
                     removeStorage(STORAGE_KEYS.AUTH_TOKEN);
                     setToken(null);
@@ -40,9 +48,15 @@ export function useAuth() {
                 }
             })
             .finally(() => {
-                setIsSessionLoading(false);
+                if (!cancelled) {
+                    setIsSessionLoading(false);
+                }
             });
-    }, [initialToken]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [initialToken, token]);
 
     async function login(userNameOrEmail, password) {
         setIsAuthenticating(true);
