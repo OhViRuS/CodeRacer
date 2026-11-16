@@ -17,6 +17,7 @@ const MAX_MISTAKES = 10000;
 
 // Saves the finished race once. Without a token the result is saved as a guest.
 // If the token turns out to be expired, the session is ended and the result is saved as a guest instead of being lost.
+// A late response never touches the UI or the session once the challenge has been exited, and a 401 only ends the session if the token it was sent with is still the current one.
 // A failed save can be tried again with retry() when the failure may be temporary (no connection, server error).
 // Returns { status, sessionExpired, message, canRetry, retry, reset }:
 //   status: 'idle' | 'saving' | 'saved' | 'guest' | 'skipped' | 'failed'
@@ -33,6 +34,20 @@ function useSaveRaceResult({
     const [outcome, setOutcome] = useState(null);
     const [attempt, setAttempt] = useState(0);
     const hasSavedRef = useRef(false);
+    const isMountedRef = useRef(true);
+    const tokenRef = useRef(token);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        tokenRef.current = token;
+    }, [token]);
 
     useEffect(() => {
         if (!isCompleted || !snippetId || hasSavedRef.current) {
@@ -49,32 +64,51 @@ function useSaveRaceResult({
             mistakes: Math.min(mistakes, MAX_MISTAKES)
         };
 
+        // The request itself is never aborted, so a result is not lost if the
+        // player exits right after finishing. Only its outcome is ignored.
         saveRaceResult(token, result)
             .then(() => {
-                setOutcome({ status: token ? 'saved' : 'guest' });
+                if (isMountedRef.current) {
+                    setOutcome({ status: token ? 'saved' : 'guest' });
+                }
             })
             .catch(error => {
                 if (token && error.status === 401) {
-                    onSessionExpired();
+                    // End the session only if it is still the one this request was sent with.
+                    const endsSession =
+                        isMountedRef.current && tokenRef.current === token;
+
+                    if (endsSession) {
+                        onSessionExpired();
+                    }
 
                     return saveRaceResult(null, result)
                         .then(() => {
-                            setOutcome({ status: 'guest', sessionExpired: true });
+                            if (isMountedRef.current) {
+                                setOutcome({
+                                    status: 'guest',
+                                    sessionExpired: endsSession
+                                });
+                            }
                         })
                         .catch(guestError => {
-                            setOutcome({
-                                status: 'failed',
-                                message: guestError.message,
-                                canRetry: isRetryable(guestError)
-                            });
+                            if (isMountedRef.current) {
+                                setOutcome({
+                                    status: 'failed',
+                                    message: guestError.message,
+                                    canRetry: isRetryable(guestError)
+                                });
+                            }
                         });
                 }
 
-                setOutcome({
-                    status: 'failed',
-                    message: error.message,
-                    canRetry: isRetryable(error)
-                });
+                if (isMountedRef.current) {
+                    setOutcome({
+                        status: 'failed',
+                        message: error.message,
+                        canRetry: isRetryable(error)
+                    });
+                }
             });
     }, [
         isCompleted,
