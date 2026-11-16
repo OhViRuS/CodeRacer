@@ -14,6 +14,7 @@ function Lobby({
     onStartImportedChallenge,
     user,
     token,
+    onSessionExpired,
     isSessionLoading,
     isAuthenticating,
     onLogin,
@@ -86,7 +87,7 @@ function Lobby({
                     />
                 </div>
 
-                {user && <StatisticsSection user={user} token={token} />}
+                {user && <StatisticsSection user={user} token={token} onSessionExpired={onSessionExpired} />}
 
                 <SourceFileImport onStartChallenge={onStartImportedChallenge} />
             </>
@@ -103,7 +104,7 @@ function Lobby({
                 onLogout={onLogout}
             />
 
-            {user && <StatisticsSection user={user} token={token} />}
+            {user && <StatisticsSection user={user} token={token} onSessionExpired={onSessionExpired} />}
 
             <div className="button-container">
                 <button

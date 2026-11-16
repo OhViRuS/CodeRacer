@@ -75,6 +75,7 @@ function App() {
                 onStartImportedChallenge={handleStartImportedChallenge}
                 user={user}
                 token={token}
+                onSessionExpired={logout}
                 isSessionLoading={isSessionLoading}
                 isAuthenticating={isAuthenticating}
                 onLogin={login}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import StatisticsPanel from './StatisticsPanel';
 
 // Toggle for the statistics panel. The panel loads its data each time it is opened.
-function StatisticsSection({ user, token }) {
+function StatisticsSection({ user, token, onSessionExpired }) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -16,7 +16,13 @@ function StatisticsSection({ user, token }) {
                 {isOpen ? 'Hide my statistics' : 'My statistics'}
             </button>
 
-            {isOpen && <StatisticsPanel user={user} token={token} />}
+            {isOpen && (
+                <StatisticsPanel
+                    user={user}
+                    token={token}
+                    onSessionExpired={onSessionExpired}
+                />
+            )}
         </div>
     );
 }

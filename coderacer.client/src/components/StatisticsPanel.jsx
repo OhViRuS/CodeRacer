@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     fetchRecentResults,
     fetchUserStatistics
@@ -21,9 +21,17 @@ function StatCard({ label, value }) {
     );
 }
 
-function StatisticsPanel({ user, token }) {
+function StatisticsPanel({ user, token, onSessionExpired }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
+
+    // Keep the latest callback without making it an effect dependency,
+    // so a non-memoized logout can't trigger a refetch on every render.
+    const onSessionExpiredRef = useRef(onSessionExpired);
+
+    useEffect(() => {
+        onSessionExpiredRef.current = onSessionExpired;
+    }, [onSessionExpired]);
 
     useEffect(() => {
         let cancelled = false;
@@ -38,9 +46,17 @@ function StatisticsPanel({ user, token }) {
                 }
             })
             .catch(error => {
-                if (!cancelled) {
-                    setError(error.message);
+                if (cancelled) {
+                    return;
                 }
+
+                if (error.status === 401) {
+                    // Session expired: log out instead of showing an error.
+                    onSessionExpiredRef.current?.();
+                    return;
+                }
+
+                setError(error.message);
             });
 
         return () => {
