@@ -88,6 +88,8 @@ function TypingChallenge({
                     status={saveResult.status}
                     sessionExpired={saveResult.sessionExpired}
                     message={saveResult.message}
+                    canRetry={saveResult.canRetry}
+                    onRetry={saveResult.retry}
                 />
 
                 {importedSnippet && hasNextSnippet ? (

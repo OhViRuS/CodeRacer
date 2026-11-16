@@ -5,7 +5,7 @@ const MESSAGES = {
     skipped: 'Results for imported code are not saved yet.'
 };
 
-function SaveStatus({ status, sessionExpired, message }) {
+function SaveStatus({ status, sessionExpired, message, canRetry, onRetry }) {
     if (status === 'idle') {
         return null;
     }
@@ -21,12 +21,24 @@ function SaveStatus({ status, sessionExpired, message }) {
     }
 
     return (
-        <p
-            className={`save-status ${status === 'failed' ? 'save-status-error' : ''}`}
-            role="status"
-        >
-            {text}
-        </p>
+        <div className="save-status-wrapper">
+            <p
+                className={`save-status ${status === 'failed' ? 'save-status-error' : ''}`}
+                role="status"
+            >
+                {text}
+            </p>
+
+            {status === 'failed' && canRetry && (
+                <button
+                    className="secondary-btn"
+                    type="button"
+                    onClick={onRetry}
+                >
+                    Try again
+                </button>
+            )}
+        </div>
     );
 }
 
