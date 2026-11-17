@@ -11,6 +11,7 @@ function App() {
 
     const {
         user,
+        token,
         isSessionLoading,
         isAuthenticating,
         login,
@@ -44,6 +45,8 @@ function App() {
                     importedSnippet={importedSnippet}
                     hasNextSnippet={hasNextSnippet}
                     onNextSnippet={handleNextSnippet}
+                    token={token}
+                    onSessionExpired={logout}
                     onExit={() => {
                         setGameLanguage(null);
                         setImportedSnippets([]);
@@ -71,6 +74,8 @@ function App() {
                 onStartGame={setGameLanguage}
                 onStartImportedChallenge={handleStartImportedChallenge}
                 user={user}
+                token={token}
+                onSessionExpired={logout}
                 isSessionLoading={isSessionLoading}
                 isAuthenticating={isAuthenticating}
                 onLogin={login}

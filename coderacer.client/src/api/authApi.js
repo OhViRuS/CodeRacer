@@ -1,37 +1,7 @@
-async function getErrorMessage(response, fallbackMessage) {
-    try {
-        const data = await response.json();
-
-        if (data.message) {
-            return data.message;
-        }
-
-        if (data.errors) {
-            return Object.values(data.errors)
-                .flat()
-                .join(' ');
-        }
-    } catch {
-        return fallbackMessage;
-    }
-
-    return fallbackMessage;
-}
-
-async function createResponseError(response, fallbackMessage) {
-    let message;
-
-    if (response.status >= 500) {
-        message = 'Server error, try again later';
-    } else {
-        message = await getErrorMessage(response, fallbackMessage);
-    }
-
-    const error = new Error(message);
-    error.status = response.status;
-
-    return error;
-}
+import {
+    createResponseError,
+    NETWORK_ERROR_MESSAGE
+} from './apiErrors';
 
 export async function registerUser(
     userName,
@@ -55,7 +25,7 @@ export async function registerUser(
             })
         });
     } catch {
-        throw new Error('Unable to reach server. Try again later.');
+        throw new Error(NETWORK_ERROR_MESSAGE);
     }
 
     if (!response.ok) {
@@ -83,7 +53,7 @@ export async function loginUser(userNameOrEmail, password) {
             })
         });
     } catch {
-        throw new Error('Unable to reach server. Try again later.');
+        throw new Error(NETWORK_ERROR_MESSAGE);
     }
 
     if (!response.ok) {
@@ -106,7 +76,7 @@ export async function fetchCurrentUser(token) {
             }
         });
     } catch {
-        throw new Error('Unable to reach server. Try again later.');
+        throw new Error(NETWORK_ERROR_MESSAGE);
     }
 
     if (!response.ok) {

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import RaceResults from './RaceResults';
 import { fetchCodeSnippet } from '../api/codeSnippetsApi';
+import SaveStatus from './SaveStatus';
+import useSaveRaceResult from '../hooks/useSaveRaceResult';
 import useTypingChallenge from '../hooks/useTypingChallenge';
 
 function TypingChallenge({
@@ -8,7 +10,9 @@ function TypingChallenge({
     importedSnippet,
     hasNextSnippet,
     onNextSnippet,
-    onExit
+    onExit,
+    token,
+    onSessionExpired
 }) {
     const [fetchedSnippet, setFetchedSnippet] = useState(null);
     const [error, setError] = useState(null);
@@ -44,8 +48,20 @@ function TypingChallenge({
         resetChallenge
     } = useTypingChallenge(snippet);
 
+    const saveResult = useSaveRaceResult({
+        isCompleted,
+        snippetId: snippet?.id ?? null,
+        elapsedTime,
+        wpm,
+        accuracy,
+        mistakes,
+        token,
+        onSessionExpired
+    });
+
     function handleNextSnippet() {
         resetChallenge();
+        saveResult.reset();
         onNextSnippet();
     }
 
@@ -66,6 +82,14 @@ function TypingChallenge({
                     wpm={wpm}
                     accuracy={accuracy}
                     mistakes={mistakes}
+                />
+
+                <SaveStatus
+                    status={saveResult.status}
+                    sessionExpired={saveResult.sessionExpired}
+                    message={saveResult.message}
+                    canRetry={saveResult.canRetry}
+                    onRetry={saveResult.retry}
                 />
 
                 {importedSnippet && hasNextSnippet ? (
