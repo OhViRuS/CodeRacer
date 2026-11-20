@@ -28,6 +28,13 @@ public class LeaderboardRepositoryTests
             Email = "second@example.com",
             PasswordHash = "hash"
         };
+        var guestUser = new User
+        {
+            Id = GuestAccount.Id,
+            UserName = GuestAccount.UserName,
+            Email = GuestAccount.Email,
+            PasswordHash = GuestAccount.PasswordHash
+        };
         var matchingSnippet = new CodeSnippet
         {
             Id = Guid.NewGuid(),
@@ -45,7 +52,7 @@ public class LeaderboardRepositoryTests
             ProgrammingConcept = "Output"
         };
 
-        context.Users.AddRange(firstUser, secondUser);
+        context.Users.AddRange(firstUser, secondUser, guestUser);
         context.CodeSnippets.AddRange(matchingSnippet, otherSnippet);
         context.RaceResults.AddRange(
             new RaceResult
@@ -79,6 +86,14 @@ public class LeaderboardRepositoryTests
                 TypingSpeed = 200,
                 Accuracy = 99,
                 CompletionTime = TimeSpan.FromSeconds(10)
+            },
+            new RaceResult
+            {
+                UserId = guestUser.Id,
+                CodeSnippetId = matchingSnippet.Id,
+                TypingSpeed = 999,
+                Accuracy = 100,
+                CompletionTime = TimeSpan.FromSeconds(1)
             });
         await context.SaveChangesAsync();
 
@@ -88,7 +103,7 @@ public class LeaderboardRepositoryTests
                 SortBy: LeaderboardSortBy.TypingSpeed,
                 Language: ProgrammingLanguage.CSharp,
                 Difficulty: Difficulty.Hard,
-                Topic: "Loops"),
+                Topic: "loops"),
             CancellationToken.None);
 
         var row = Assert.Single(result);

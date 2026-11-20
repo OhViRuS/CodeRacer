@@ -65,6 +65,25 @@ public class LeaderboardServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_CompletionTimeSortReturnsFastestEntriesFirst()
+    {
+        var slower = CreateRow("slower", typingSpeed: 120, accuracy: 95, completionTime: 20);
+        var faster = CreateRow("faster", typingSpeed: 100, accuracy: 90, completionTime: 15);
+        _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { slower, faster });
+
+        var result = await _service.GetAsync(
+            new LeaderboardQuery(
+                LeaderboardSortBy.CompletionTime,
+                ProgrammingLanguage.CSharp,
+                Difficulty.Easy),
+            CancellationToken.None);
+
+        Assert.Equal("faster", result[0].UserName);
+        Assert.Equal(TimeSpan.FromSeconds(15), result[0].CompletionTime);
+    }
+
+    [Fact]
     public async Task GetAsync_AppliesLimit()
     {
         var rows = Enumerable.Range(1, 3)

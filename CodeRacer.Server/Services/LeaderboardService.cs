@@ -50,22 +50,22 @@ public class LeaderboardService(IRaceResultRepository raceResultRepository) : IL
     private static IEnumerable<LeaderboardRow> OrderRows(
         IEnumerable<LeaderboardRow> rows,
         LeaderboardSortBy sortBy) => sortBy switch
-    {
-        LeaderboardSortBy.TypingSpeed => rows
-            .OrderByDescending(row => row.TypingSpeed)
-            .ThenBy(row => row.CompletionTime)
-            .ThenByDescending(row => row.Accuracy)
-            .ThenBy(row => row.UserName),
-        LeaderboardSortBy.Accuracy => rows
-            .OrderByDescending(row => row.Accuracy)
-            .ThenByDescending(row => row.TypingSpeed)
-            .ThenBy(row => row.CompletionTime)
-            .ThenBy(row => row.UserName),
-        LeaderboardSortBy.CompletionTime => rows
-            .OrderBy(row => row.CompletionTime)
-            .ThenByDescending(row => row.TypingSpeed)
-            .ThenByDescending(row => row.Accuracy)
-            .ThenBy(row => row.UserName),
-        _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "Unsupported leaderboard sort order.")
-    };
+        {
+            LeaderboardSortBy.TypingSpeed => rows
+                .OrderByDescending(row => row.TypingSpeed)
+                .ThenBy(row => row.CompletionTime)
+                .ThenByDescending(row => row.Accuracy)
+                .ThenBy(row => row.UserName),
+            LeaderboardSortBy.Accuracy => rows
+                .OrderByDescending(row => row.Accuracy)
+                .ThenByDescending(row => row.TypingSpeed)
+                .ThenBy(row => row.CompletionTime)
+                .ThenBy(row => row.UserName),
+            LeaderboardSortBy.CompletionTime => rows
+                .OrderBy(row => row.CompletionTime)
+                .ThenByDescending(row => row.TypingSpeed)
+                .ThenByDescending(row => row.Accuracy)
+                .ThenBy(row => row.UserName),
+            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "Unsupported leaderboard sort order.")
+        };
 }

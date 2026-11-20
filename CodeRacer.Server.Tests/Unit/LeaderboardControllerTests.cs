@@ -85,4 +85,24 @@ public class LeaderboardControllerTests
         Assert.Contains("difficulty", badRequest.Value?.ToString());
         Assert.Empty(service.ReceivedCalls());
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public async Task Get_WithOutOfBoundsLimit_ReturnsBadRequest(int limit)
+    {
+        var service = Substitute.For<ILeaderboardService>();
+        var controller = new LeaderboardController(service);
+
+        var result = await controller.Get(
+            sortBy: LeaderboardSortBy.TypingSpeed,
+            language: ProgrammingLanguage.CSharp,
+            difficulty: Difficulty.Hard,
+            topic: null,
+            limit: limit,
+            cancellationToken: CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Empty(service.ReceivedCalls());
+    }
 }
