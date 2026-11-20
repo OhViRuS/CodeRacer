@@ -26,6 +26,21 @@ public class LeaderboardController(ILeaderboardService leaderboardService) : Con
             return BadRequest("SortBy, language, and difficulty are required for a comparable leaderboard.");
         }
 
+        if (!Enum.IsDefined(typeof(LeaderboardSortBy), sortBy.Value))
+        {
+            return BadRequest("Invalid sortBy value.");
+        }
+
+        if (!Enum.IsDefined(typeof(ProgrammingLanguage), language.Value))
+        {
+            return BadRequest("Invalid language value.");
+        }
+
+        if (!Enum.IsDefined(typeof(Difficulty), difficulty.Value))
+        {
+            return BadRequest("Invalid difficulty value.");
+        }
+
         if (limit is < 1 or > LeaderboardService.MaxLimit)
         {
             return BadRequest($"Limit must be between 1 and {LeaderboardService.MaxLimit}.");
