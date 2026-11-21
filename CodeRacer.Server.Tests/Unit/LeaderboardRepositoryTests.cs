@@ -9,7 +9,7 @@ namespace CodeRacer.Server.Tests.Unit;
 public class LeaderboardRepositoryTests
 {
     [Fact]
-    public async Task GetLeaderboardAsync_AggregatesUsersAndAppliesSnippetFilters()
+    public async Task GetLeaderboardAsync_AppliesSnippetFiltersAndExcludesGuest()
     {
         var options = new DbContextOptionsBuilder<CodeRacerDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -119,7 +119,8 @@ public class LeaderboardRepositoryTests
                 SortBy: LeaderboardSortBy.Accuracy,
                 Language: ProgrammingLanguage.CSharp,
                 Difficulty: Difficulty.Hard,
-                Topic: "Loops"),
+                Topic: "Loops",
+                SnippetId: matchingSnippet.Id),
             CancellationToken.None);
 
         var accuracyRow = Assert.Single(accuracyResult);

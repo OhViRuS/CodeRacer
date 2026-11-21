@@ -5,4 +5,5 @@ public record LeaderboardQuery(
     ProgrammingLanguage Language,
     Difficulty Difficulty,
     string? Topic = null,
-    int Limit = 10);
+    int Limit = 10,
+    Guid? SnippetId = null);

@@ -55,16 +55,19 @@ public class LeaderboardService(IRaceResultRepository raceResultRepository) : IL
                 .OrderByDescending(row => row.TypingSpeed)
                 .ThenBy(row => row.CompletionTime)
                 .ThenByDescending(row => row.Accuracy)
+                .ThenBy(row => row.CreatedAt)
                 .ThenBy(row => row.UserName),
             LeaderboardSortBy.Accuracy => rows
                 .OrderByDescending(row => row.Accuracy)
                 .ThenByDescending(row => row.TypingSpeed)
                 .ThenBy(row => row.CompletionTime)
+                .ThenBy(row => row.CreatedAt)
                 .ThenBy(row => row.UserName),
             LeaderboardSortBy.CompletionTime => rows
                 .OrderBy(row => row.CompletionTime)
                 .ThenByDescending(row => row.TypingSpeed)
                 .ThenByDescending(row => row.Accuracy)
+                .ThenBy(row => row.CreatedAt)
                 .ThenBy(row => row.UserName),
             _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "Unsupported leaderboard sort order.")
         };

@@ -72,6 +72,7 @@ public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceR
             .Where(race => race.UserId != GuestAccount.Id)
             .Where(race => Context.CodeSnippets.Any(snippet =>
                 snippet.Id == race.CodeSnippetId
+                && (query.SnippetId == null || snippet.Id == query.SnippetId)
                 && snippet.Language == query.Language
                 && snippet.Difficulty == query.Difficulty
                 && (normalizedTopic == null || snippet.ProgrammingConcept.ToLower() == normalizedTopic)));
@@ -83,19 +84,19 @@ public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceR
                 && (other.TypingSpeed > result.TypingSpeed
                     || other.TypingSpeed == result.TypingSpeed && other.CompletionTime < result.CompletionTime
                     || other.TypingSpeed == result.TypingSpeed && other.CompletionTime == result.CompletionTime && other.Accuracy > result.Accuracy
-                    || other.TypingSpeed == result.TypingSpeed && other.CompletionTime == result.CompletionTime && other.Accuracy == result.Accuracy && other.CreatedAt > result.CreatedAt))),
+                    || other.TypingSpeed == result.TypingSpeed && other.CompletionTime == result.CompletionTime && other.Accuracy == result.Accuracy && other.CreatedAt < result.CreatedAt))),
             LeaderboardSortBy.Accuracy => filteredResults.Where(result => !filteredResults.Any(other =>
                 other.UserId == result.UserId
                 && (other.Accuracy > result.Accuracy
                     || other.Accuracy == result.Accuracy && other.TypingSpeed > result.TypingSpeed
                     || other.Accuracy == result.Accuracy && other.TypingSpeed == result.TypingSpeed && other.CompletionTime < result.CompletionTime
-                    || other.Accuracy == result.Accuracy && other.TypingSpeed == result.TypingSpeed && other.CompletionTime == result.CompletionTime && other.CreatedAt > result.CreatedAt))),
+                    || other.Accuracy == result.Accuracy && other.TypingSpeed == result.TypingSpeed && other.CompletionTime == result.CompletionTime && other.CreatedAt < result.CreatedAt))),
             LeaderboardSortBy.CompletionTime => filteredResults.Where(result => !filteredResults.Any(other =>
                 other.UserId == result.UserId
                 && (other.CompletionTime < result.CompletionTime
                     || other.CompletionTime == result.CompletionTime && other.TypingSpeed > result.TypingSpeed
                     || other.CompletionTime == result.CompletionTime && other.TypingSpeed == result.TypingSpeed && other.Accuracy > result.Accuracy
-                    || other.CompletionTime == result.CompletionTime && other.TypingSpeed == result.TypingSpeed && other.Accuracy == result.Accuracy && other.CreatedAt > result.CreatedAt))),
+                    || other.CompletionTime == result.CompletionTime && other.TypingSpeed == result.TypingSpeed && other.Accuracy == result.Accuracy && other.CreatedAt < result.CreatedAt))),
             _ => throw new ArgumentOutOfRangeException(nameof(query.SortBy), query.SortBy, "Unsupported leaderboard sort order.")
         };
 
@@ -110,16 +111,19 @@ public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceR
                 .OrderByDescending(result => result.race.TypingSpeed)
                 .ThenBy(result => result.race.CompletionTime)
                 .ThenByDescending(result => result.race.Accuracy)
+                .ThenBy(result => result.race.CreatedAt)
                 .ThenBy(result => result.UserName),
             LeaderboardSortBy.Accuracy => orderedResults
                 .OrderByDescending(result => result.race.Accuracy)
                 .ThenByDescending(result => result.race.TypingSpeed)
                 .ThenBy(result => result.race.CompletionTime)
+                .ThenBy(result => result.race.CreatedAt)
                 .ThenBy(result => result.UserName),
             LeaderboardSortBy.CompletionTime => orderedResults
                 .OrderBy(result => result.race.CompletionTime)
                 .ThenByDescending(result => result.race.TypingSpeed)
                 .ThenByDescending(result => result.race.Accuracy)
+                .ThenBy(result => result.race.CreatedAt)
                 .ThenBy(result => result.UserName),
             _ => throw new ArgumentOutOfRangeException(nameof(query.SortBy), query.SortBy, "Unsupported leaderboard sort order.")
         };

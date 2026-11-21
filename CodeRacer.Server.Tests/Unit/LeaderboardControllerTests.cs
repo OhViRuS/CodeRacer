@@ -105,4 +105,24 @@ public class LeaderboardControllerTests
         Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Empty(service.ReceivedCalls());
     }
+
+    [Fact]
+    public async Task Get_CompletionTimeWithoutSnippetId_ReturnsBadRequest()
+    {
+        var service = Substitute.For<ILeaderboardService>();
+        var controller = new LeaderboardController(service);
+
+        var result = await controller.Get(
+            sortBy: LeaderboardSortBy.CompletionTime,
+            language: ProgrammingLanguage.CSharp,
+            difficulty: Difficulty.Hard,
+            topic: null,
+            snippetId: null,
+            limit: 10,
+            cancellationToken: CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Contains("snippetId", badRequest.Value?.ToString());
+        Assert.Empty(service.ReceivedCalls());
+    }
 }

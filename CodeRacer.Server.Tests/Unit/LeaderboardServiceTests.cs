@@ -84,6 +84,25 @@ public class LeaderboardServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_EqualScoresPreferEarlierCreatedAtBeforeUserName()
+    {
+        var earlier = CreateRow("zebra", 100, 95, 15, DateTime.UtcNow.AddMinutes(-1));
+        var later = CreateRow("alpha", 100, 95, 15, DateTime.UtcNow);
+        _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { later, earlier });
+
+        var result = await _service.GetAsync(
+            new LeaderboardQuery(
+                LeaderboardSortBy.CompletionTime,
+                ProgrammingLanguage.CSharp,
+                Difficulty.Easy,
+                SnippetId: Guid.NewGuid()),
+            CancellationToken.None);
+
+        Assert.Equal("zebra", result[0].UserName);
+    }
+
+    [Fact]
     public async Task GetAsync_AppliesLimit()
     {
         var rows = Enumerable.Range(1, 3)
@@ -146,7 +165,8 @@ public class LeaderboardServiceTests
         string userName,
         double typingSpeed,
         double accuracy,
-        double completionTime) =>
+        double completionTime,
+        DateTime? createdAt = null) =>
         new(
             Guid.NewGuid(),
             userName,
@@ -155,5 +175,5 @@ public class LeaderboardServiceTests
             Accuracy: accuracy,
             CompletionTime: TimeSpan.FromSeconds(completionTime),
             Mistakes: 0,
-            CreatedAt: DateTime.UtcNow);
+            CreatedAt: createdAt ?? DateTime.UtcNow);
 }

@@ -18,6 +18,7 @@ public class LeaderboardController(ILeaderboardService leaderboardService) : Con
         [FromQuery] ProgrammingLanguage? language = null,
         [FromQuery] Difficulty? difficulty = null,
         [FromQuery] string? topic = null,
+        [FromQuery] Guid? snippetId = null,
         [FromQuery] int limit = 10,
         CancellationToken cancellationToken = default)
     {
@@ -46,7 +47,18 @@ public class LeaderboardController(ILeaderboardService leaderboardService) : Con
             return BadRequest($"Limit must be between 1 and {LeaderboardService.MaxLimit}.");
         }
 
-        var query = new LeaderboardQuery(sortBy.Value, language.Value, difficulty.Value, topic, limit);
+        if (sortBy == LeaderboardSortBy.CompletionTime && snippetId is null)
+        {
+            return BadRequest("snippetId is required when sorting by completion time.");
+        }
+
+        var query = new LeaderboardQuery(
+            sortBy.Value,
+            language.Value,
+            difficulty.Value,
+            topic,
+            limit,
+            snippetId);
         var entries = await _leaderboardService.GetAsync(query, cancellationToken);
         return Ok(entries);
     }
