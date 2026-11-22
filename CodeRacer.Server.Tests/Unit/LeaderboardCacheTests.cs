@@ -136,6 +136,33 @@ public class LeaderboardCacheTests
         Assert.Equal(1, _cache.Count);
     }
 
+    [Fact]
+    public async Task GetOrLoadAsync_ManyDistinctQueriesConcurrently_NeverExceedsTheLimit()
+    {
+        // Every load waits for the same signal, so loads that use different semaphores finish
+        // together and their inserts collide, the case where an unsynchronized size check overshoots.
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        async Task<IReadOnlyList<LeaderboardEntryDto>> LoadWhenReleased(CancellationToken token)
+        {
+            await release.Task;
+            return [CreateEntry()];
+        }
+
+        var requests = Enumerable.Range(0, LeaderboardCache.MaxEntries * 2)
+            .Select(i => Task.Run(() => _cache.GetOrLoadAsync(
+                CreateQuery(topic: $"topic {i}"),
+                LoadWhenReleased,
+                CancellationToken.None)))
+            .ToArray();
+        await Task.Delay(100);
+        release.SetResult();
+        var results = await Task.WhenAll(requests);
+
+        Assert.All(results, result => Assert.Single(result)); // every request is still answered
+        Assert.Equal(LeaderboardCache.MaxEntries, _cache.Count);
+    }
+
     private static Task<IReadOnlyList<LeaderboardEntryDto>> LoadAsync(ref int loads)
     {
         loads++;

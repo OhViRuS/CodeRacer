@@ -19,6 +19,10 @@ namespace CodeRacer.Server.Services;
 /// miss the same leaderboard at once, one loads it and the other 49 wait and reuse the result.
 /// <c>lock</c> cannot be used here because the load is awaited, and <c>await</c> is not allowed
 /// inside a <c>lock</c>.</item>
+/// <item>Storing a loaded entry is guarded by a <c>lock</c>: the size check, the removal of expired
+/// entries and the insert must happen as one step, or two requests for different leaderboards
+/// (which use different semaphores) could both see room for one more and go over
+/// <see cref="MaxEntries"/>. <c>lock</c> works here because nothing inside it is awaited.</item>
 /// </list>
 /// The cache never holds a DbContext: the scoped caller passes the load function in.
 /// </summary>
@@ -41,6 +45,7 @@ public sealed class LeaderboardCache(TimeProvider timeProvider) : ILeaderboardCa
     private readonly SemaphoreSlim[] _gates = Enumerable.Range(0, GateCount)
         .Select(_ => new SemaphoreSlim(1, 1))
         .ToArray();
+    private readonly object _storeLock = new();
     private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <summary>Number of leaderboards currently held, fresh or expired.</summary>
@@ -93,17 +98,21 @@ public sealed class LeaderboardCache(TimeProvider timeProvider) : ILeaderboardCa
 
     private void Store(LeaderboardQuery query, IReadOnlyList<LeaderboardEntryDto> entries)
     {
-        if (_entries.Count >= MaxEntries && !_entries.ContainsKey(query))
+        // Check-then-insert on shared data: without the lock, two threads could both pass the check.
+        lock (_storeLock)
         {
-            RemoveExpired();
-            if (_entries.Count >= MaxEntries)
+            if (_entries.Count >= MaxEntries && !_entries.ContainsKey(query))
             {
-                // Full of fresh entries: serve this result without caching it.
-                return;
+                RemoveExpired();
+                if (_entries.Count >= MaxEntries)
+                {
+                    // Full of fresh entries: serve this result without caching it.
+                    return;
+                }
             }
-        }
 
-        _entries[query] = new CacheEntry(entries, _timeProvider.GetUtcNow() + TimeToLive);
+            _entries[query] = new CacheEntry(entries, _timeProvider.GetUtcNow() + TimeToLive);
+        }
     }
 
     private void RemoveExpired()
