@@ -34,6 +34,21 @@ public class LeaderboardServiceTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task GetAsync_CachedResult_CannotBeModified()
+    {
+        _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { CreateRow("player", typingSpeed: 100, accuracy: 95, completionTime: 15) });
+
+        var result = await _service.GetAsync(
+            new LeaderboardQuery(LeaderboardSortBy.TypingSpeed, ProgrammingLanguage.CSharp, Difficulty.Easy),
+            CancellationToken.None);
+
+        Assert.IsNotType<List<LeaderboardEntryDto>>(result);
+        var asList = Assert.IsAssignableFrom<IList<LeaderboardEntryDto>>(result);
+        Assert.Throws<NotSupportedException>(() => asList.Clear());
+    }
+
     [Theory]
     [InlineData("  Loops ")]
     [InlineData("loops")]

@@ -63,7 +63,10 @@ public class LeaderboardService(
                 CompletionTime: row.CompletionTime,
                 Mistakes: row.Mistakes,
                 CreatedAt: row.CreatedAt))
-            .ToList();
+            .ToList()
+            // Every request gets this same cached instance, so it must not be changeable,
+            // not even by casting it back to a List.
+            .AsReadOnly();
     }
 
     private static IEnumerable<LeaderboardRow> OrderRows(
