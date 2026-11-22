@@ -27,6 +27,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserStatisticsService, UserStatisticsService>();
 builder.Services.AddScoped<IRaceResultService, RaceResultService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddSingleton<ILeaderboardCache, LeaderboardCache>(); // shared by all requests
 
 // The system clock; tests replace it with a fixed point in time.
 builder.Services.AddSingleton(TimeProvider.System);

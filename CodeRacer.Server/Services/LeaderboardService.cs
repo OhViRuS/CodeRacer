@@ -4,11 +4,18 @@ using CodeRacer.Server.Models;
 
 namespace CodeRacer.Server.Services;
 
-public class LeaderboardService(IRaceResultRepository raceResultRepository) : ILeaderboardService
+/// <summary>
+/// Builds ranked leaderboards. Results are served through the shared <see cref="ILeaderboardCache"/>,
+/// so a new race result can take up to <see cref="LeaderboardCache.TimeToLive"/> to appear.
+/// </summary>
+public class LeaderboardService(
+    IRaceResultRepository raceResultRepository,
+    ILeaderboardCache leaderboardCache) : ILeaderboardService
 {
     public const int MaxLimit = 100;
 
     private readonly IRaceResultRepository _raceResultRepository = raceResultRepository;
+    private readonly ILeaderboardCache _leaderboardCache = leaderboardCache;
 
     public async Task<IReadOnlyList<LeaderboardEntryDto>> GetAsync(
         LeaderboardQuery query,
@@ -29,11 +36,22 @@ public class LeaderboardService(IRaceResultRepository raceResultRepository) : IL
             Topic = string.IsNullOrWhiteSpace(query.Topic) ? null : query.Topic.Trim()
         };
 
-        var rows = await _raceResultRepository.GetLeaderboardAsync(normalizedQuery, cancellationToken);
-        var orderedRows = OrderRows(rows, normalizedQuery.SortBy);
+        // The normalized query is the cache key, so "Loops" and "  Loops  " share one entry.
+        return await _leaderboardCache.GetOrLoadAsync(
+            normalizedQuery,
+            token => LoadAsync(normalizedQuery, token),
+            cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<LeaderboardEntryDto>> LoadAsync(
+        LeaderboardQuery query,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _raceResultRepository.GetLeaderboardAsync(query, cancellationToken);
+        var orderedRows = OrderRows(rows, query.SortBy);
 
         return orderedRows
-            .Take(limit)
+            .Take(query.Limit)
             .Select((row, index) => new LeaderboardEntryDto(
                 Rank: index + 1,
                 UserId: row.UserId,
