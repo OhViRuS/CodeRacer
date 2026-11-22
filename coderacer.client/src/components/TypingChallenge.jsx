@@ -7,6 +7,8 @@ import useTypingChallenge from '../hooks/useTypingChallenge';
 
 function TypingChallenge({
     language,
+    difficulty = null,
+    topic = null,
     importedSnippet,
     hasNextSnippet,
     onNextSnippet,
@@ -26,14 +28,14 @@ function TypingChallenge({
             return;
         }
 
-        fetchCodeSnippet(language)
+        fetchCodeSnippet(language, difficulty, topic)
             .then(data => {
                 setFetchedSnippet(data);
             })
             .catch(error => {
                 setError(error.message);
             });
-    }, [language, importedSnippet]);
+    }, [language, difficulty, topic, importedSnippet]);
 
     const {
         typedText,

@@ -18,13 +18,15 @@ public class CodeSnippetsController : ControllerBase
     }
 
     // GET: /api/codesnippets
-    // GET: /api/codesnippets?language=Python
+    // GET: /api/codesnippets?language=Python&difficulty=Easy&topic=Loops
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CodeSnippet>>> GetAll(
         [FromQuery] ProgrammingLanguage? language = null,
+        [FromQuery] Difficulty? difficulty = null,
+        [FromQuery] string? topic = null,
         CancellationToken cancellationToken = default)
     {
-        var snippets = await _snippetRepository.GetSnippetsAsync(language, cancellationToken);
+        var snippets = await _snippetRepository.GetSnippetsAsync(language, difficulty, topic, cancellationToken);
         return Ok(snippets);
     }
 
@@ -33,6 +35,24 @@ public class CodeSnippetsController : ControllerBase
     public ActionResult<IEnumerable<string>> GetLanguages()
     {
         return Ok(Enum.GetNames<ProgrammingLanguage>());
+    }
+
+    // GET: /api/codesnippets/difficulties
+    [HttpGet("difficulties")]
+    public ActionResult<IEnumerable<string>> GetDifficulties()
+    {
+        return Ok(Enum.GetNames<Difficulty>());
+    }
+
+    // GET: /api/codesnippets/topics
+    // GET: /api/codesnippets/topics?language=Python
+    [HttpGet("topics")]
+    public async Task<ActionResult<IEnumerable<string>>> GetTopics(
+        [FromQuery] ProgrammingLanguage? language = null,
+        CancellationToken cancellationToken = default)
+    {
+        var topics = await _snippetRepository.GetTopicsAsync(language, cancellationToken);
+        return Ok(topics);
     }
 
     // GET: /api/codesnippets/{id}
@@ -48,14 +68,15 @@ public class CodeSnippetsController : ControllerBase
         return Ok(snippet);
     }
 
-    // GET: /api/codesnippets/random?language=Python&difficulty=Easy
+    // GET: /api/codesnippets/random?language=Python&difficulty=Easy&topic=Loops
     [HttpGet("random")]
     public async Task<ActionResult<CodeSnippet>> GetRandom(
         [FromQuery] ProgrammingLanguage? language = null,
         [FromQuery] Difficulty? difficulty = null,
+        [FromQuery] string? topic = null,
         CancellationToken cancellationToken = default)
     {
-        var randomSnippet = await _snippetRepository.GetRandomAsync(language, difficulty, cancellationToken);
+        var randomSnippet = await _snippetRepository.GetRandomAsync(language, difficulty, topic, cancellationToken);
         if (randomSnippet == null)
         {
             return NotFound();

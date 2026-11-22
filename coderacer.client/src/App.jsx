@@ -6,6 +6,8 @@ import { useAuth } from './hooks/useAuth';
 
 function App() {
     const [gameLanguage, setGameLanguage] = useState(null);
+    const [gameDifficulty, setGameDifficulty] = useState(null);
+    const [gameTopic, setGameTopic] = useState(null);
     const [importedSnippets, setImportedSnippets] = useState([]);
     const [currentSnippetIndex, setCurrentSnippetIndex] = useState(0);
 
@@ -19,10 +21,18 @@ function App() {
         logout
     } = useAuth();
 
+    function handleStartGame(language, difficulty = null, topic = null) {
+        setGameLanguage(language);
+        setGameDifficulty(difficulty);
+        setGameTopic(topic);
+    }
+
     function handleStartImportedChallenge(language, snippets) {
         setImportedSnippets(snippets);
         setCurrentSnippetIndex(0);
         setGameLanguage(language);
+        setGameDifficulty(null);
+        setGameTopic(null);
     }
 
     function handleNextSnippet() {
@@ -42,6 +52,8 @@ function App() {
 
                 <TypingChallenge
                     language={gameLanguage}
+                    difficulty={gameDifficulty}
+                    topic={gameTopic}
                     importedSnippet={importedSnippet}
                     hasNextSnippet={hasNextSnippet}
                     onNextSnippet={handleNextSnippet}
@@ -49,6 +61,8 @@ function App() {
                     onSessionExpired={logout}
                     onExit={() => {
                         setGameLanguage(null);
+                        setGameDifficulty(null);
+                        setGameTopic(null);
                         setImportedSnippets([]);
                         setCurrentSnippetIndex(0);
                     }}
@@ -71,7 +85,7 @@ function App() {
             </p>
 
             <Lobby
-                onStartGame={setGameLanguage}
+                onStartGame={handleStartGame}
                 onStartImportedChallenge={handleStartImportedChallenge}
                 user={user}
                 token={token}

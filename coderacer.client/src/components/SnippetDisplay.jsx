@@ -6,6 +6,10 @@ function SnippetDisplay({
     onRetry
 }) {
     function getDifficultyName(difficulty) {
+        if (typeof difficulty === 'string') {
+            return difficulty;
+        }
+
         switch (difficulty) {
             case 0:
                 return 'Easy';
