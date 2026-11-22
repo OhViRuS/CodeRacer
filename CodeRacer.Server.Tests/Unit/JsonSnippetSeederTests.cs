@@ -43,68 +43,117 @@ public sealed class JsonSnippetSeederTests : IDisposable
         """;
 
     [Fact]
-    public async Task SeedIfEmptyAsync_EmptyTable_InsertsFileContents()
+    public async Task SeedAsync_EmptyTable_InsertsFileContents()
     {
         var context = CreateContext();
         var seeder = CreateSeeder(context, WriteFile(TwoSnippets));
 
-        int inserted = await seeder.SeedIfEmptyAsync(CancellationToken.None);
+        int inserted = await seeder.SeedAsync(CancellationToken.None);
 
         Assert.Equal(2, inserted);
         Assert.Equal(2, await context.CodeSnippets.CountAsync());
     }
 
     [Fact]
-    public async Task SeedIfEmptyAsync_NormalizesCodeText()
+    public async Task SeedAsync_NormalizesCodeText()
     {
         var context = CreateContext();
         var seeder = CreateSeeder(context, WriteFile(TwoSnippets));
 
-        await seeder.SeedIfEmptyAsync(CancellationToken.None);
+        await seeder.SeedAsync(CancellationToken.None);
 
         var stored = await context.CodeSnippets.SingleAsync(s => s.Id == Guid.Parse("11111111-1111-1111-1111-111111111111"));
         Assert.DoesNotContain('\r', stored.CodeText);
     }
 
     [Fact]
-    public async Task SeedIfEmptyAsync_TableAlreadyHasData_DoesNothingAndIgnoresFile()
+    public async Task SeedAsync_TableHasSomeSnippets_InsertsOnlyMissingOnes()
+    {
+        // Only one of the two starter snippets is in the table, e.g. because somebody raced it before.
+        var context = CreateContext();
+        context.CodeSnippets.Add(new CodeSnippet
+        {
+            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            CodeText = "print(1)",
+            Language = ProgrammingLanguage.Python,
+            ProgrammingConcept = "Output"
+        });
+        await context.SaveChangesAsync();
+        var seeder = CreateSeeder(context, WriteFile(TwoSnippets));
+
+        int inserted = await seeder.SeedAsync(CancellationToken.None);
+
+        Assert.Equal(1, inserted);
+        Assert.Equal(2, await context.CodeSnippets.CountAsync());
+        Assert.Single(await context.CodeSnippets.Where(s => s.Id == Guid.Parse("11111111-1111-1111-1111-111111111111")).ToListAsync());
+    }
+
+    [Fact]
+    public async Task SeedAsync_TableHasUnrelatedSnippet_StillInsertsStarterSnippets()
     {
         var context = CreateContext();
         context.CodeSnippets.Add(new CodeSnippet { Id = Guid.NewGuid(), CodeText = "x", ProgrammingConcept = "Output" });
         await context.SaveChangesAsync();
-        var seeder = CreateSeeder(context, "missing.json");
+        var seeder = CreateSeeder(context, WriteFile(TwoSnippets));
 
-        int inserted = await seeder.SeedIfEmptyAsync(CancellationToken.None);
+        int inserted = await seeder.SeedAsync(CancellationToken.None);
 
-        Assert.Equal(0, inserted);
-        Assert.Equal(1, await context.CodeSnippets.CountAsync());
+        Assert.Equal(2, inserted);
+        Assert.Equal(3, await context.CodeSnippets.CountAsync());
     }
 
     [Fact]
-    public async Task SeedIfEmptyAsync_MissingFile_ThrowsFileNotFound()
+    public async Task SeedAsync_AllStarterSnippetsAlreadyThere_InsertsNothing()
+    {
+        var context = CreateContext();
+        var seeder = CreateSeeder(context, WriteFile(TwoSnippets));
+        await seeder.SeedAsync(CancellationToken.None);
+
+        int inserted = await seeder.SeedAsync(CancellationToken.None);
+
+        Assert.Equal(0, inserted);
+        Assert.Equal(2, await context.CodeSnippets.CountAsync());
+    }
+
+    [Fact]
+    public async Task SeedAsync_SameCodeUnderAnotherId_IsSkipped()
+    {
+        var context = CreateContext();
+        context.CodeSnippets.Add(new CodeSnippet { Id = Guid.NewGuid(), CodeText = "print(1)", ProgrammingConcept = "Output" });
+        await context.SaveChangesAsync();
+        var seeder = CreateSeeder(context, WriteFile(TwoSnippets));
+
+        int inserted = await seeder.SeedAsync(CancellationToken.None);
+
+        Assert.Equal(1, inserted);
+        Assert.Equal(2, await context.CodeSnippets.CountAsync());
+    }
+
+    [Fact]
+    public async Task SeedAsync_MissingFile_ThrowsFileNotFound()
     {
         var seeder = CreateSeeder(CreateContext(), "missing.json");
 
-        await Assert.ThrowsAsync<FileNotFoundException>(() => seeder.SeedIfEmptyAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<FileNotFoundException>(() => seeder.SeedAsync(CancellationToken.None));
     }
 
     [Fact]
-    public async Task SeedIfEmptyAsync_SnippetWithoutId_Throws()
+    public async Task SeedAsync_SnippetWithoutId_Throws()
     {
         var json = """[ { "CodeText": "x", "Language": 2, "Difficulty": 0, "ProgrammingConcept": "Output" } ]""";
         var seeder = CreateSeeder(CreateContext(), WriteFile(json));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedIfEmptyAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync(CancellationToken.None));
     }
 
     [Fact]
-    public async Task SeedIfEmptyAsync_RunTwice_InsertsOnce()
+    public async Task SeedAsync_RunTwice_InsertsOnce()
     {
         var context = CreateContext();
         var seeder = CreateSeeder(context, WriteFile(TwoSnippets));
 
-        await seeder.SeedIfEmptyAsync(CancellationToken.None);
-        int second = await seeder.SeedIfEmptyAsync(CancellationToken.None);
+        await seeder.SeedAsync(CancellationToken.None);
+        int second = await seeder.SeedAsync(CancellationToken.None);
 
         Assert.Equal(0, second);
         Assert.Equal(2, await context.CodeSnippets.CountAsync());

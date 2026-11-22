@@ -109,13 +109,15 @@ public class CodeSnippetsController : ControllerBase
             return BadRequest("Route id does not match snippet id.");
         }
 
-        var updated = await _snippetRepository.UpdateSnippetAsync(id, updatedSnippet, cancellationToken);
-        if (!updated)
+        try
         {
-            return NotFound();
+            var updated = await _snippetRepository.UpdateSnippetAsync(id, updatedSnippet, cancellationToken);
+            return updated ? NoContent() : NotFound();
         }
-
-        return NoContent();
+        catch (DuplicateSnippetException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 
     // DELETE: /api/codesnippets/{id}

@@ -49,6 +49,9 @@ namespace CodeRacer.Server.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CodeText")
+                        .IsUnique();
+
                     b.ToTable("CodeSnippets");
                 });
 

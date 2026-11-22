@@ -8,9 +8,10 @@ using Microsoft.EntityFrameworkCore;
 namespace CodeRacer.Server.Services;
 
 /// <summary>
-/// One-time seeding: when the CodeSnippets table is empty, the starter snippets in
-/// <c>Data/snippets.json</c> are copied into it. After that the database is the only source of
-/// snippets; the file is never read again or written to.
+/// Startup seeding: every starter snippet in <c>Data/snippets.json</c> that is not in the CodeSnippets
+/// table yet is inserted. A snippet counts as already there when its Id or its (normalized) code is in the
+/// table, so rows that exist for other reasons never block the rest from being seeded and nothing is
+/// inserted twice. The database stays the only source of snippets; the file is never written to.
 /// The path comes from <c>SnippetStorage:FilePath</c> (relative paths start at the content root).
 /// </summary>
 public class JsonSnippetSeeder(
@@ -20,25 +21,43 @@ public class JsonSnippetSeeder(
 {
     private const string DefaultPath = "Data/snippets.json";
 
-    public async Task<int> SeedIfEmptyAsync(CancellationToken cancellationToken)
+    public async Task<int> SeedAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (await context.CodeSnippets.AnyAsync(cancellationToken))
+        List<CodeSnippet> starterSnippets = await ReadSnippetsAsync(ResolvePath(), cancellationToken);
+
+        var existing = await context.CodeSnippets
+            .AsNoTracking()
+            .Select(snippet => new { snippet.Id, snippet.CodeText })
+            .ToListAsync(cancellationToken);
+
+        HashSet<Guid> knownIds = existing.Select(snippet => snippet.Id).ToHashSet();
+        HashSet<string> knownCode = existing.Select(snippet => snippet.CodeText).ToHashSet();
+
+        var missing = new List<CodeSnippet>();
+        foreach (CodeSnippet snippet in starterSnippets)
+        {
+            snippet.CodeText = snippet.CodeText.NormalizeSnippet();
+
+            if (knownIds.Contains(snippet.Id) || knownCode.Contains(snippet.CodeText))
+            {
+                continue;
+            }
+
+            knownIds.Add(snippet.Id);
+            knownCode.Add(snippet.CodeText);
+            missing.Add(snippet);
+        }
+
+        if (missing.Count == 0)
         {
             return 0;
         }
 
-        List<CodeSnippet> snippets = await ReadSnippetsAsync(ResolvePath(), cancellationToken);
-
-        foreach (CodeSnippet snippet in snippets)
-        {
-            snippet.CodeText = snippet.CodeText.NormalizeSnippet();
-        }
-
-        context.CodeSnippets.AddRange(snippets);
+        context.CodeSnippets.AddRange(missing);
         await context.SaveChangesAsync(cancellationToken);
-        return snippets.Count;
+        return missing.Count;
     }
 
     private string ResolvePath()

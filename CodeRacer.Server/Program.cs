@@ -52,6 +52,7 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<ISnippetSeeder, JsonSnippetSeeder>();
+builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 builder.Services.AddSingleton<ISourceFileImporter, SourceFileImporter>();
 builder.Services.AddSingleton<ISourceSnippetExtractor, SourceSnippetExtractor>();
 
@@ -62,8 +63,8 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var seeder = scope.ServiceProvider.GetRequiredService<ISnippetSeeder>();
-    await seeder.SeedIfEmptyAsync(CancellationToken.None);
+    var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
+    await initializer.InitializeAsync(CancellationToken.None);
 }
 
 app.UseDefaultFiles();

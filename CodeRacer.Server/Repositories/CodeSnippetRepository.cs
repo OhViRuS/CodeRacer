@@ -77,10 +77,25 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
             snippet.Id = Guid.NewGuid();
         }
 
-        await AddAsync(snippet, cancellationToken);
+        try
+        {
+            await AddAsync(snippet, cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // Two requests with the same code can both pass the check above; the unique index rejects the second.
+            Context.ChangeTracker.Clear();
+
+            if (await CodeExistsAsync(snippet.CodeText, excludedId: null, cancellationToken))
+            {
+                throw new DuplicateSnippetException();
+            }
+
+            throw;
+        }
     }
 
-    public Task<bool> UpdateSnippetAsync(Guid id, CodeSnippet updatedSnippet, CancellationToken cancellationToken)
+    public async Task<bool> UpdateSnippetAsync(Guid id, CodeSnippet updatedSnippet, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(updatedSnippet);
 
@@ -93,19 +108,62 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
             ProgrammingConcept = updatedSnippet.ProgrammingConcept
         };
 
-        return UpdateAsync(replacement, cancellationToken);
+        try
+        {
+            return await UpdateAsync(replacement, cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // Changing the code to the code of another snippet violates the unique index.
+            Context.ChangeTracker.Clear();
+
+            if (await CodeExistsAsync(replacement.CodeText, excludedId: id, cancellationToken))
+            {
+                throw new DuplicateSnippetException();
+            }
+
+            throw;
+        }
     }
 
     public async Task<bool> DeleteSnippetAsync(Guid id, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (await Context.RaceResults.AsNoTracking().AnyAsync(result => result.CodeSnippetId == id, cancellationToken))
+        if (await IsUsedByRaceResultsAsync(id, cancellationToken))
         {
             throw new SnippetInUseException();
         }
 
-        return await DeleteAsync(id, cancellationToken);
+        try
+        {
+            return await DeleteAsync(id, cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // A race result may have been saved between the check above and the delete;
+            // the foreign key then rejects the delete. Report that as "in use" (409), not as a 500.
+            Context.ChangeTracker.Clear();
+
+            if (await IsUsedByRaceResultsAsync(id, cancellationToken))
+            {
+                throw new SnippetInUseException();
+            }
+
+            throw;
+        }
+    }
+
+    private Task<bool> IsUsedByRaceResultsAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return Context.RaceResults.AsNoTracking().AnyAsync(result => result.CodeSnippetId == id, cancellationToken);
+    }
+
+    private Task<bool> CodeExistsAsync(string codeText, Guid? excludedId, CancellationToken cancellationToken)
+    {
+        return DbSet.AsNoTracking().AnyAsync(
+            snippet => snippet.CodeText == codeText && snippet.Id != excludedId,
+            cancellationToken);
     }
 
     private IQueryable<CodeSnippet> FilterByLanguage(ProgrammingLanguage? language)

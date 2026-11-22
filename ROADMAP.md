@@ -82,7 +82,7 @@ settings such as programming language and difficulty.
 
 ### Requirement Coverage
 
-- [ ] Automatic Entity Framework migrations.
+- [x] Automatic Entity Framework migrations.
 - [ ] At least 80% unit/integration test coverage.
 - [ ] CI pipeline gating pull requests.
 - [ ] Automated tests and an additional CI quality gate.
