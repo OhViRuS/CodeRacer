@@ -48,7 +48,7 @@ functionality to the requirements of each lab assignment.
 - [x] Entity Framework and relational database.
 - [x] Generic type and generic method.
 - [x] Custom exception.
-- [ ] `async`/`await` for I/O.
+- [x] `async`/`await` for I/O.
 - [x] Shared memory/concurrency scenario.
 - [x] Dependency Injection.
 - [x] At least 50% unit/integration test coverage.
@@ -82,7 +82,7 @@ settings such as programming language and difficulty.
 
 ### Requirement Coverage
 
-- [ ] Automatic Entity Framework migrations.
+- [x] Automatic Entity Framework migrations.
 - [ ] At least 80% unit/integration test coverage.
 - [ ] CI pipeline gating pull requests.
 - [ ] Automated tests and an additional CI quality gate.
