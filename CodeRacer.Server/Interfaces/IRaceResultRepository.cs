@@ -4,7 +4,7 @@ namespace CodeRacer.Server.Interfaces;
 
 /// <summary>
 /// Repository for RaceResult entity.
-/// Extends IRepository with race-result-specific queries needed for statistics and history.
+/// Extends IRepository with race-result-specific queries needed for statistics, history, and leaderboards.
 /// Following Single Responsibility Principle - each repository handles one aggregate root.
 /// </summary>
 public interface IRaceResultRepository : IRepository<RaceResult>
@@ -30,4 +30,9 @@ public interface IRaceResultRepository : IRepository<RaceResult>
     /// Returns null when the user has no races.
     /// </summary>
     Task<RaceStatistics?> GetStatisticsByUserIdAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Gets one selected leaderboard race for each non-guest user.</summary>
+    Task<IReadOnlyList<LeaderboardRow>> GetLeaderboardAsync(
+        LeaderboardQuery query,
+        CancellationToken cancellationToken);
 }
