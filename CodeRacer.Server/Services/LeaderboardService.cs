@@ -4,11 +4,18 @@ using CodeRacer.Server.Models;
 
 namespace CodeRacer.Server.Services;
 
-public class LeaderboardService(IRaceResultRepository raceResultRepository) : ILeaderboardService
+/// <summary>
+/// Builds ranked leaderboards. Results are served through the shared <see cref="ILeaderboardCache"/>,
+/// so a new race result can take up to <see cref="LeaderboardCache.TimeToLive"/> to appear.
+/// </summary>
+public class LeaderboardService(
+    IRaceResultRepository raceResultRepository,
+    ILeaderboardCache leaderboardCache) : ILeaderboardService
 {
     public const int MaxLimit = 100;
 
     private readonly IRaceResultRepository _raceResultRepository = raceResultRepository;
+    private readonly ILeaderboardCache _leaderboardCache = leaderboardCache;
 
     public async Task<IReadOnlyList<LeaderboardEntryDto>> GetAsync(
         LeaderboardQuery query,
@@ -26,14 +33,26 @@ public class LeaderboardService(IRaceResultRepository raceResultRepository) : IL
         var normalizedQuery = query with
         {
             Limit = limit,
-            Topic = string.IsNullOrWhiteSpace(query.Topic) ? null : query.Topic.Trim()
+            // Lowercased because the repository matches topics case-insensitively.
+            Topic = string.IsNullOrWhiteSpace(query.Topic) ? null : query.Topic.Trim().ToLowerInvariant()
         };
 
-        var rows = await _raceResultRepository.GetLeaderboardAsync(normalizedQuery, cancellationToken);
-        var orderedRows = OrderRows(rows, normalizedQuery.SortBy);
+        // The normalized query is the cache key, so "Loops", "loops" and "  Loops  " share one entry.
+        return await _leaderboardCache.GetOrLoadAsync(
+            normalizedQuery,
+            token => LoadAsync(normalizedQuery, token),
+            cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<LeaderboardEntryDto>> LoadAsync(
+        LeaderboardQuery query,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _raceResultRepository.GetLeaderboardAsync(query, cancellationToken);
+        var orderedRows = OrderRows(rows, query.SortBy);
 
         return orderedRows
-            .Take(limit)
+            .Take(query.Limit)
             .Select((row, index) => new LeaderboardEntryDto(
                 Rank: index + 1,
                 UserId: row.UserId,
@@ -44,7 +63,10 @@ public class LeaderboardService(IRaceResultRepository raceResultRepository) : IL
                 CompletionTime: row.CompletionTime,
                 Mistakes: row.Mistakes,
                 CreatedAt: row.CreatedAt))
-            .ToList();
+            .ToList()
+            // Every request gets this same cached instance, so it must not be changeable,
+            // not even by casting it back to a List.
+            .AsReadOnly();
     }
 
     private static IEnumerable<LeaderboardRow> OrderRows(

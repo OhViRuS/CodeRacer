@@ -2,6 +2,7 @@ using CodeRacer.Server.Dtos;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
 using CodeRacer.Server.Services;
+using CodeRacer.Server.Tests.TestDoubles;
 using NSubstitute;
 
 namespace CodeRacer.Server.Tests.Unit;
@@ -13,7 +14,60 @@ public class LeaderboardServiceTests
 
     public LeaderboardServiceTests()
     {
-        _service = new LeaderboardService(_raceResultRepository);
+        // A real cache (fresh per test, since xUnit creates a new instance of this class for each test).
+        _service = new LeaderboardService(_raceResultRepository, new LeaderboardCache(new FixedTimeProvider()));
+    }
+
+    [Fact]
+    public async Task GetAsync_SameQueryTwice_QueriesTheRepositoryOnce()
+    {
+        _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { CreateRow("player", typingSpeed: 100, accuracy: 95, completionTime: 15) });
+        var query = new LeaderboardQuery(LeaderboardSortBy.TypingSpeed, ProgrammingLanguage.CSharp, Difficulty.Easy);
+
+        var first = await _service.GetAsync(query, CancellationToken.None);
+        var second = await _service.GetAsync(query, CancellationToken.None);
+
+        Assert.Same(first, second);
+        await _raceResultRepository.Received(1).GetLeaderboardAsync(
+            Arg.Any<LeaderboardQuery>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetAsync_CachedResult_CannotBeModified()
+    {
+        _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { CreateRow("player", typingSpeed: 100, accuracy: 95, completionTime: 15) });
+
+        var result = await _service.GetAsync(
+            new LeaderboardQuery(LeaderboardSortBy.TypingSpeed, ProgrammingLanguage.CSharp, Difficulty.Easy),
+            CancellationToken.None);
+
+        Assert.IsNotType<List<LeaderboardEntryDto>>(result);
+        var asList = Assert.IsAssignableFrom<IList<LeaderboardEntryDto>>(result);
+        Assert.Throws<NotSupportedException>(() => asList.Clear());
+    }
+
+    [Theory]
+    [InlineData("  Loops ")]
+    [InlineData("loops")]
+    [InlineData("LOOPS")]
+    public async Task GetAsync_TopicsDifferingOnlyInSpacesOrCase_ShareOneCacheEntry(string sameTopic)
+    {
+        _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<LeaderboardRow>());
+
+        await _service.GetAsync(
+            new LeaderboardQuery(LeaderboardSortBy.TypingSpeed, ProgrammingLanguage.CSharp, Difficulty.Easy, Topic: "Loops"),
+            CancellationToken.None);
+        await _service.GetAsync(
+            new LeaderboardQuery(LeaderboardSortBy.TypingSpeed, ProgrammingLanguage.CSharp, Difficulty.Easy, Topic: sameTopic),
+            CancellationToken.None);
+
+        await _raceResultRepository.Received(1).GetLeaderboardAsync(
+            Arg.Any<LeaderboardQuery>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -125,7 +179,7 @@ public class LeaderboardServiceTests
     }
 
     [Fact]
-    public async Task GetAsync_TrimsTopicBeforeRepositoryQuery()
+    public async Task GetAsync_TrimsAndLowercasesTopicBeforeRepositoryQuery()
     {
         _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<LeaderboardRow>());
@@ -139,7 +193,7 @@ public class LeaderboardServiceTests
             CancellationToken.None);
 
         await _raceResultRepository.Received(1).GetLeaderboardAsync(
-            Arg.Is<LeaderboardQuery>(query => query.Topic == "Loops"),
+            Arg.Is<LeaderboardQuery>(query => query.Topic == "loops"),
             Arg.Any<CancellationToken>());
     }
 
