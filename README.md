@@ -50,6 +50,28 @@ The planned development of CodeRacer, including the Alpha, Beta, and Final versi
 - A current [Node.js LTS](https://nodejs.org/) release with npm
 - [Visual Studio 2026](https://visualstudio.microsoft.com/downloads/) with the ASP.NET and web development workload, [Visual Studio Code](https://code.visualstudio.com/) with C# Dev Kit, or JetBrains Rider
 - A trusted ASP.NET Core development certificate: `dotnet dev-certs https --trust`
+- [PostgreSQL](https://www.postgresql.org/download/) running locally (or reachable from your machine); all application data is stored there
+
+## Database Setup
+
+CodeRacer stores all its data (users, code snippets, race results) in PostgreSQL through Entity Framework Core.
+
+1. Install PostgreSQL and make sure it is running.
+2. Give the server a connection string named `CodeRacer`. Do not commit your password; set it as an environment variable instead (PowerShell, in the terminal you start the server from):
+
+   ```pwsh
+   $env:ConnectionStrings__CodeRacer = "Host=localhost;Port=5432;Database=coderacer;Username=postgres;Password=<your password>"
+   ```
+
+3. Start the server (see below). On startup it creates or updates the database by applying all pending EF Core migrations and then adds any starter snippets from `Data/snippets.json` that are missing. There is no separate `dotnet ef database update` step.
+
+If PostgreSQL is not running or the connection string is wrong, the server stops at startup with a connection error.
+
+After changing an entity or the model, add a migration from `CodeRacer.Server` and commit the generated files in `Migrations/`:
+
+```pwsh
+dotnet ef migrations add <MigrationName>
+```
 
 ## Build and Run
 
@@ -93,7 +115,7 @@ Planned technology stack:
 
 ### Database
 
-* Relational database using Entity Framework Core
+* PostgreSQL, accessed through Entity Framework Core (migrations are applied automatically at startup)
 
 ### Development
 

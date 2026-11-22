@@ -16,7 +16,6 @@ public class RaceResultServiceTests
 {
     private readonly IRaceResultRepository _raceResultRepository = Substitute.For<IRaceResultRepository>();
     private readonly ICodeSnippetProvider _snippetProvider = Substitute.For<ICodeSnippetProvider>();
-    private readonly ISnippetRecordRepository _snippetRecordRepository = Substitute.For<ISnippetRecordRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly FixedTimeProvider _clock = new();
     private readonly IRaceResultService _raceResultService;
@@ -25,7 +24,7 @@ public class RaceResultServiceTests
 
     public RaceResultServiceTests()
     {
-        _raceResultService = new RaceResultService(_raceResultRepository, _snippetProvider, _snippetRecordRepository, _userRepository, _clock);
+        _raceResultService = new RaceResultService(_raceResultRepository, _snippetProvider, _userRepository, _clock);
     }
 
     #region Save Race Result Tests
@@ -56,7 +55,7 @@ public class RaceResultServiceTests
         };
 
         var snippet = new CodeSnippet { Id = request.CodeSnippetId, CodeText = "x", ProgrammingConcept = "Output" };
-        _snippetProvider.GetById(request.CodeSnippetId).Returns(snippet);
+        _snippetProvider.GetByIdAsync(request.CodeSnippetId, Cancellation).Returns(snippet);
         _raceResultRepository.AddAsync(Arg.Any<RaceResult>(), Cancellation).Returns(savedResult);
 
         // Act
@@ -72,7 +71,6 @@ public class RaceResultServiceTests
         Assert.Equal(request.Accuracy, result.Accuracy);
         Assert.Equal(request.Mistakes, result.Mistakes);
         await _raceResultRepository.Received(1).AddAsync(Arg.Any<RaceResult>(), Cancellation);
-        await _snippetRecordRepository.Received(1).EnsureExistsAsync(snippet, Cancellation);
     }
 
     [Fact]
@@ -80,7 +78,7 @@ public class RaceResultServiceTests
     {
         // Arrange
         var request = new SaveRaceResultRequest(Guid.NewGuid(), TimeSpan.FromSeconds(30), 100.5, 95.0, 2);
-        _snippetProvider.GetById(request.CodeSnippetId)
+        _snippetProvider.GetByIdAsync(request.CodeSnippetId, Cancellation)
             .Returns(new CodeSnippet { Id = request.CodeSnippetId, CodeText = "x", ProgrammingConcept = "Output" });
         _raceResultRepository.AddAsync(Arg.Any<RaceResult>(), Cancellation).Returns(call => call.Arg<RaceResult>());
 
@@ -97,7 +95,7 @@ public class RaceResultServiceTests
     {
         // Arrange
         var request = new SaveRaceResultRequest(Guid.NewGuid(), TimeSpan.FromSeconds(30), 100.5, 95.0, 2);
-        _snippetProvider.GetById(request.CodeSnippetId)
+        _snippetProvider.GetByIdAsync(request.CodeSnippetId, Cancellation)
             .Returns(new CodeSnippet { Id = request.CodeSnippetId, CodeText = "x", ProgrammingConcept = "Output" });
         _raceResultRepository.AddAsync(Arg.Any<RaceResult>(), Cancellation).Returns(call => call.Arg<RaceResult>());
 
@@ -116,7 +114,7 @@ public class RaceResultServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var request = new SaveRaceResultRequest(Guid.NewGuid(), TimeSpan.FromSeconds(30), 100.5, 95.0, 2);
-        _snippetProvider.GetById(request.CodeSnippetId)
+        _snippetProvider.GetByIdAsync(request.CodeSnippetId, Cancellation)
             .Returns(new CodeSnippet { Id = request.CodeSnippetId, CodeText = "x", ProgrammingConcept = "Output" });
         _raceResultRepository.AddAsync(Arg.Any<RaceResult>(), Cancellation).Returns(call => call.Arg<RaceResult>());
 
@@ -140,7 +138,6 @@ public class RaceResultServiceTests
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => _raceResultService.SaveRaceResultAsync(Guid.NewGuid(), request, cts.Token));
         Assert.Empty(_snippetProvider.ReceivedCalls());
-        Assert.Empty(_snippetRecordRepository.ReceivedCalls());
         Assert.Empty(_raceResultRepository.ReceivedCalls());
         Assert.Empty(_userRepository.ReceivedCalls());
     }
@@ -150,14 +147,13 @@ public class RaceResultServiceTests
     {
         // Arrange
         var request = new SaveRaceResultRequest(Guid.NewGuid(), TimeSpan.FromSeconds(30), 100.5, 95.0, 2);
-        _snippetProvider.GetById(request.CodeSnippetId).Returns((CodeSnippet?)null);
+        _snippetProvider.GetByIdAsync(request.CodeSnippetId, Cancellation).Returns((CodeSnippet?)null);
 
         // Act
         var result = await _raceResultService.SaveRaceResultAsync(Guid.NewGuid(), request, Cancellation);
 
         // Assert
         Assert.Null(result);
-        await _snippetRecordRepository.DidNotReceiveWithAnyArgs().EnsureExistsAsync(default!, default);
         await _raceResultRepository.DidNotReceiveWithAnyArgs().AddAsync(default!, default);
     }
 

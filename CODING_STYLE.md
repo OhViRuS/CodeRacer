@@ -24,7 +24,7 @@ cd CodeRacer.Server
 dotnet format
 
 # Format only specific files (paths are relative to the current folder)
-dotnet format --include Models/CodeSnippet.cs Services/FileSnippetProvider.cs
+dotnet format --include Models/CodeSnippet.cs Services/JsonSnippetSeeder.cs
 
 # Only check, without changing any files (run this before opening a pull request)
 dotnet format --verify-no-changes
