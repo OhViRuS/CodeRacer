@@ -47,4 +47,23 @@ public class CodeSnippetsControllerIntegrationTests(CodeRacerWebApplicationFacto
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
     }
+
+    [Fact]
+    public async Task Create_WithIdOfExistingSnippet_IgnoresTheIdAndCreatesNewSnippet()
+    {
+        var existing = (await _client.GetFromJsonAsync<List<CodeSnippet>>("/api/codesnippets"))![0];
+        var snippet = new CodeSnippet
+        {
+            Id = existing.Id,
+            CodeText = "echo " + Guid.NewGuid(),
+            ProgrammingConcept = "Output"
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/codesnippets", snippet);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<CodeSnippet>();
+        Assert.NotNull(created);
+        Assert.NotEqual(existing.Id, created.Id);
+    }
 }

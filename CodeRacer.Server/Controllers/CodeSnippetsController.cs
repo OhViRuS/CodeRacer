@@ -75,7 +75,8 @@ public class CodeSnippetsController : ControllerBase
             return BadRequest();
         }
 
-        snippet.Id = snippet.Id == Guid.Empty ? Guid.NewGuid() : snippet.Id;
+        // The server owns snippet Ids; an Id sent by the client is ignored, so it cannot collide with an existing row.
+        snippet.Id = Guid.NewGuid();
         try
         {
             await _snippetRepository.AddSnippetAsync(snippet, validateDuplicate: true, cancellationToken);
