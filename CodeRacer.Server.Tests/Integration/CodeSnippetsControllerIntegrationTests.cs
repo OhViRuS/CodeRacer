@@ -66,4 +66,59 @@ public class CodeSnippetsControllerIntegrationTests(CodeRacerWebApplicationFacto
         Assert.NotNull(created);
         Assert.NotEqual(existing.Id, created.Id);
     }
+
+    [Fact]
+    public async Task Create_ConceptLongerThanColumn_Returns400()
+    {
+        var snippet = new CodeSnippet
+        {
+            CodeText = "echo " + Guid.NewGuid(),
+            ProgrammingConcept = new string('x', CodeSnippet.MaxProgrammingConceptLength + 1)
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/codesnippets", snippet);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_CodeTextLongerThanLimit_Returns400()
+    {
+        var snippet = new CodeSnippet
+        {
+            CodeText = new string('x', CodeSnippet.MaxCodeTextLength + 1),
+            ProgrammingConcept = "Output"
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/codesnippets", snippet);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_CodeTextAtLimit_Returns201()
+    {
+        var snippet = new CodeSnippet
+        {
+            CodeText = new string('x', CodeSnippet.MaxCodeTextLength),
+            ProgrammingConcept = "Output"
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/codesnippets", snippet);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("   \t  ")]
+    [InlineData("\r\n")]
+    public async Task Create_WhitespaceOnlyCodeText_Returns400(string codeText)
+    {
+        var snippet = new CodeSnippet { CodeText = codeText, ProgrammingConcept = "Output" };
+
+        var response = await _client.PostAsJsonAsync("/api/codesnippets", snippet);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

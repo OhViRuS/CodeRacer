@@ -32,7 +32,7 @@ public class CodeRacerDbContext(DbContextOptions<CodeRacerDbContext> options) : 
             entity.Property(snippet => snippet.CodeText).IsRequired();
             // Two requests creating the same code at once must not both succeed; the database decides.
             entity.HasIndex(snippet => snippet.CodeText).IsUnique();
-            entity.Property(snippet => snippet.ProgrammingConcept).IsRequired().HasMaxLength(100);
+            entity.Property(snippet => snippet.ProgrammingConcept).IsRequired().HasMaxLength(CodeSnippet.MaxProgrammingConceptLength);
             entity.Property(snippet => snippet.Language).HasConversion<string>().HasMaxLength(50);
             entity.Property(snippet => snippet.Difficulty).HasConversion<string>().HasMaxLength(20);
         });
