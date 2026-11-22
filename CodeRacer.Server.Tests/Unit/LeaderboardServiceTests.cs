@@ -34,8 +34,11 @@ public class LeaderboardServiceTests
             Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task GetAsync_TopicsDifferingOnlyInSpaces_ShareOneCacheEntry()
+    [Theory]
+    [InlineData("  Loops ")]
+    [InlineData("loops")]
+    [InlineData("LOOPS")]
+    public async Task GetAsync_TopicsDifferingOnlyInSpacesOrCase_ShareOneCacheEntry(string sameTopic)
     {
         _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<LeaderboardRow>());
@@ -44,7 +47,7 @@ public class LeaderboardServiceTests
             new LeaderboardQuery(LeaderboardSortBy.TypingSpeed, ProgrammingLanguage.CSharp, Difficulty.Easy, Topic: "Loops"),
             CancellationToken.None);
         await _service.GetAsync(
-            new LeaderboardQuery(LeaderboardSortBy.TypingSpeed, ProgrammingLanguage.CSharp, Difficulty.Easy, Topic: "  Loops "),
+            new LeaderboardQuery(LeaderboardSortBy.TypingSpeed, ProgrammingLanguage.CSharp, Difficulty.Easy, Topic: sameTopic),
             CancellationToken.None);
 
         await _raceResultRepository.Received(1).GetLeaderboardAsync(
@@ -161,7 +164,7 @@ public class LeaderboardServiceTests
     }
 
     [Fact]
-    public async Task GetAsync_TrimsTopicBeforeRepositoryQuery()
+    public async Task GetAsync_TrimsAndLowercasesTopicBeforeRepositoryQuery()
     {
         _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<LeaderboardRow>());
@@ -175,7 +178,7 @@ public class LeaderboardServiceTests
             CancellationToken.None);
 
         await _raceResultRepository.Received(1).GetLeaderboardAsync(
-            Arg.Is<LeaderboardQuery>(query => query.Topic == "Loops"),
+            Arg.Is<LeaderboardQuery>(query => query.Topic == "loops"),
             Arg.Any<CancellationToken>());
     }
 

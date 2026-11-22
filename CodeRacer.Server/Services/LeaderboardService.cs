@@ -33,10 +33,11 @@ public class LeaderboardService(
         var normalizedQuery = query with
         {
             Limit = limit,
-            Topic = string.IsNullOrWhiteSpace(query.Topic) ? null : query.Topic.Trim()
+            // Lowercased because the repository matches topics case-insensitively.
+            Topic = string.IsNullOrWhiteSpace(query.Topic) ? null : query.Topic.Trim().ToLowerInvariant()
         };
 
-        // The normalized query is the cache key, so "Loops" and "  Loops  " share one entry.
+        // The normalized query is the cache key, so "Loops", "loops" and "  Loops  " share one entry.
         return await _leaderboardCache.GetOrLoadAsync(
             normalizedQuery,
             token => LoadAsync(normalizedQuery, token),
