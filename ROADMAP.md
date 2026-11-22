@@ -49,7 +49,7 @@ functionality to the requirements of each lab assignment.
 - [x] Generic type and generic method.
 - [x] Custom exception.
 - [ ] `async`/`await` for I/O.
-- [ ] Shared memory/concurrency scenario.
+- [x] Shared memory/concurrency scenario.
 - [x] Dependency Injection.
 - [x] At least 50% unit/integration test coverage.
 
