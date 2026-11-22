@@ -41,10 +41,13 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
         return (client, auth);
     }
 
-    /// <summary>Builds a request for a snippet that really exists in snippets.json.</summary>
-    private SaveRaceResultRequest CreateRequest(double typingSpeed = 100.5)
+    /// <summary>Builds a request for a snippet that really exists in the seeded database.</summary>
+    private async Task<SaveRaceResultRequest> CreateRequestAsync(double typingSpeed = 100.5)
     {
-        var snippetId = _factory.Services.GetRequiredService<ICodeSnippetProvider>().GetSnippets()[0].Id;
+        using var scope = _factory.Services.CreateScope();
+        var snippets = await scope.ServiceProvider.GetRequiredService<ICodeSnippetProvider>()
+            .GetSnippetsAsync(null, CancellationToken.None);
+        var snippetId = snippets[0].Id;
         return new SaveRaceResultRequest(snippetId, TimeSpan.FromSeconds(30), typingSpeed, 95.0, 2);
     }
 
@@ -53,7 +56,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     {
         // Arrange
         var (client, auth) = await CreateAuthenticatedClientAsync();
-        var request = CreateRequest();
+        var request = await CreateRequestAsync();
 
         // Act
         var response = await client.PostAsJsonAsync("/api/raceresults", request);
@@ -73,7 +76,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task SaveRaceResult_UnknownSnippet_Returns400()
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
-        var request = CreateRequest() with { CodeSnippetId = Guid.NewGuid() };
+        var request = await CreateRequestAsync() with { CodeSnippetId = Guid.NewGuid() };
 
         var response = await client.PostAsJsonAsync("/api/raceresults", request);
 
@@ -89,7 +92,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task SaveRaceResult_OutOfRangeValues_Returns400(double typingSpeed, double accuracy)
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
-        var request = CreateRequest() with { TypingSpeed = typingSpeed, Accuracy = accuracy };
+        var request = await CreateRequestAsync() with { TypingSpeed = typingSpeed, Accuracy = accuracy };
 
         var response = await client.PostAsJsonAsync("/api/raceresults", request);
 
@@ -103,7 +106,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task SaveRaceResult_MistakesOutOfRange_Returns400(int mistakes)
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
-        var request = CreateRequest() with { Mistakes = mistakes };
+        var request = await CreateRequestAsync() with { Mistakes = mistakes };
 
         var response = await client.PostAsJsonAsync("/api/raceresults", request);
 
@@ -114,7 +117,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task SaveRaceResult_MaximumAllowedValues_SavedAndStatisticsStillWork()
     {
         var (client, auth) = await CreateAuthenticatedClientAsync();
-        var request = CreateRequest() with { TypingSpeed = 500, Mistakes = 10_000 };
+        var request = await CreateRequestAsync() with { TypingSpeed = 500, Mistakes = 10_000 };
 
         var first = await client.PostAsJsonAsync("/api/raceresults", request);
         var second = await client.PostAsJsonAsync("/api/raceresults", request);
@@ -132,7 +135,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task SaveRaceResult_NonPositiveCompletionTime_Returns400(string completionTime)
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
-        var request = CreateRequest() with { CompletionTime = TimeSpan.Parse(completionTime) };
+        var request = await CreateRequestAsync() with { CompletionTime = TimeSpan.Parse(completionTime) };
 
         var response = await client.PostAsJsonAsync("/api/raceresults", request);
 
@@ -143,7 +146,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task GetRaceResultsByDateRange_DateOnlyTo_IncludesRacesFromThatDay()
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
-        await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+        await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync());
         var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
 
         var results = await client.GetFromJsonAsync<List<RaceResultDto>>(
@@ -166,7 +169,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task GetRecentRaceResults_NoCount_ReturnsUpToTen()
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
-        await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+        await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync());
 
         var response = await client.GetAsync("/api/raceresults/recent");
 
@@ -180,8 +183,8 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
 
-        var first = await client.PostAsJsonAsync("/api/raceresults", CreateRequest(80));
-        var second = await client.PostAsJsonAsync("/api/raceresults", CreateRequest(90));
+        var first = await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync(80));
+        var second = await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync(90));
 
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
@@ -192,8 +195,8 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     {
         var client = _factory.CreateClient();
 
-        var first = await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
-        var second = await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+        var first = await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync());
+        var second = await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync());
 
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
@@ -206,7 +209,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     {
         var (client, auth) = await CreateAuthenticatedClientAsync();
 
-        var response = await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+        var response = await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync());
 
         var result = await response.Content.ReadFromJsonAsync<RaceResultDto>();
         Assert.Equal(auth.User.Id, result!.UserId);
@@ -219,7 +222,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "not-a-real-token");
 
-        var response = await client.PostAsJsonAsync("/api/raceresults", CreateRequest());
+        var response = await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync());
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -228,7 +231,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task GetRaceResult_OwnResult_Returns200()
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
-        var saved = await (await client.PostAsJsonAsync("/api/raceresults", CreateRequest()))
+        var saved = await (await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync()))
             .Content.ReadFromJsonAsync<RaceResultDto>();
 
         var response = await client.GetAsync($"/api/raceresults/{saved!.Id}");
@@ -243,7 +246,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     {
         var (owner, _) = await CreateAuthenticatedClientAsync();
         var (other, _) = await CreateAuthenticatedClientAsync();
-        var saved = await (await owner.PostAsJsonAsync("/api/raceresults", CreateRequest()))
+        var saved = await (await owner.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync()))
             .Content.ReadFromJsonAsync<RaceResultDto>();
 
         var response = await other.GetAsync($"/api/raceresults/{saved!.Id}");
@@ -256,9 +259,9 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     {
         var (client, auth) = await CreateAuthenticatedClientAsync();
         var (other, _) = await CreateAuthenticatedClientAsync();
-        await client.PostAsJsonAsync("/api/raceresults", CreateRequest(80));
-        await client.PostAsJsonAsync("/api/raceresults", CreateRequest(90));
-        await other.PostAsJsonAsync("/api/raceresults", CreateRequest(70));
+        await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync(80));
+        await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync(90));
+        await other.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync(70));
 
         var results = await client.GetFromJsonAsync<List<RaceResultDto>>("/api/raceresults");
 
@@ -291,7 +294,7 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task DeleteRaceResult_OwnResult_Returns204ThenNotFound()
     {
         var (client, _) = await CreateAuthenticatedClientAsync();
-        var saved = await (await client.PostAsJsonAsync("/api/raceresults", CreateRequest()))
+        var saved = await (await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync()))
             .Content.ReadFromJsonAsync<RaceResultDto>();
 
         var delete = await client.DeleteAsync($"/api/raceresults/{saved!.Id}");
@@ -305,8 +308,8 @@ public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebA
     public async Task GetStatistics_AfterSavingResults_ReflectsThem()
     {
         var (client, auth) = await CreateAuthenticatedClientAsync();
-        await client.PostAsJsonAsync("/api/raceresults", CreateRequest(80));
-        await client.PostAsJsonAsync("/api/raceresults", CreateRequest(120));
+        await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync(80));
+        await client.PostAsJsonAsync("/api/raceresults", await CreateRequestAsync(120));
 
         var stats = await client.GetFromJsonAsync<UserStatisticsDto>($"/api/users/{auth.User.Id}/statistics");
 

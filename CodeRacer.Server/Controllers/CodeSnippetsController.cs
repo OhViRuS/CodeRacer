@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using CodeRacer.Server.Exceptions;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
@@ -21,9 +20,11 @@ public class CodeSnippetsController : ControllerBase
     // GET: /api/codesnippets
     // GET: /api/codesnippets?language=Python
     [HttpGet]
-    public ActionResult<IEnumerable<CodeSnippet>> GetAll([FromQuery] ProgrammingLanguage? language = null)
+    public async Task<ActionResult<IEnumerable<CodeSnippet>>> GetAll(
+        [FromQuery] ProgrammingLanguage? language = null,
+        CancellationToken cancellationToken = default)
     {
-        var snippets = _snippetRepository.GetSnippets(language: language);
+        var snippets = await _snippetRepository.GetSnippetsAsync(language, cancellationToken);
         return Ok(snippets);
     }
 
@@ -36,9 +37,9 @@ public class CodeSnippetsController : ControllerBase
 
     // GET: /api/codesnippets/{id}
     [HttpGet("{id:guid}")]
-    public ActionResult<CodeSnippet> GetById(Guid id)
+    public async Task<ActionResult<CodeSnippet>> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var snippet = _snippetRepository.GetById(id);
+        var snippet = await _snippetRepository.GetByIdAsync(id, cancellationToken);
         if (snippet == null)
         {
             return NotFound();
@@ -49,11 +50,12 @@ public class CodeSnippetsController : ControllerBase
 
     // GET: /api/codesnippets/random?language=Python&difficulty=Easy
     [HttpGet("random")]
-    public ActionResult<CodeSnippet> GetRandom(
+    public async Task<ActionResult<CodeSnippet>> GetRandom(
         [FromQuery] ProgrammingLanguage? language = null,
-        [FromQuery] Difficulty? difficulty = null)
+        [FromQuery] Difficulty? difficulty = null,
+        CancellationToken cancellationToken = default)
     {
-        var randomSnippet = _snippetRepository.GetRandom(language: language, difficulty: difficulty);
+        var randomSnippet = await _snippetRepository.GetRandomAsync(language, difficulty, cancellationToken);
         if (randomSnippet == null)
         {
             return NotFound();
@@ -64,17 +66,20 @@ public class CodeSnippetsController : ControllerBase
 
     // POST: /api/codesnippets
     [HttpPost]
-    public ActionResult<CodeSnippet> Create([FromBody] CodeSnippet snippet)
+    public async Task<ActionResult<CodeSnippet>> Create(
+        [FromBody] CodeSnippet snippet,
+        CancellationToken cancellationToken)
     {
         if (snippet == null)
         {
             return BadRequest();
         }
 
-        snippet.Id = snippet.Id == Guid.Empty ? Guid.NewGuid() : snippet.Id;
+        // The server owns snippet Ids; an Id sent by the client is ignored, so it cannot collide with an existing row.
+        snippet.Id = Guid.NewGuid();
         try
         {
-            _snippetRepository.AddSnippet(validateDuplicate: true, snippet: snippet);
+            await _snippetRepository.AddSnippetAsync(snippet, validateDuplicate: true, cancellationToken);
         }
         catch (DuplicateSnippetException ex)
         {
@@ -90,7 +95,10 @@ public class CodeSnippetsController : ControllerBase
 
     // PUT: /api/codesnippets/{id}
     [HttpPut("{id:guid}")]
-    public IActionResult Update(Guid id, [FromBody] CodeSnippet updatedSnippet)
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] CodeSnippet updatedSnippet,
+        CancellationToken cancellationToken)
     {
         if (updatedSnippet == null)
         {
@@ -102,25 +110,29 @@ public class CodeSnippetsController : ControllerBase
             return BadRequest("Route id does not match snippet id.");
         }
 
-        var updated = _snippetRepository.UpdateSnippet(id, updatedSnippet);
-        if (!updated)
+        try
         {
-            return NotFound();
+            var updated = await _snippetRepository.UpdateSnippetAsync(id, updatedSnippet, cancellationToken);
+            return updated ? NoContent() : NotFound();
         }
-
-        return NoContent();
+        catch (DuplicateSnippetException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 
     // DELETE: /api/codesnippets/{id}
     [HttpDelete("{id:guid}")]
-    public IActionResult Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var removed = _snippetRepository.DeleteSnippet(id);
-        if (!removed)
+        try
         {
-            return NotFound();
+            var removed = await _snippetRepository.DeleteSnippetAsync(id, cancellationToken);
+            return removed ? NoContent() : NotFound();
         }
-
-        return NoContent();
+        catch (SnippetInUseException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 }

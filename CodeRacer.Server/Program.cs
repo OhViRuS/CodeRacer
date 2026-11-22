@@ -19,7 +19,8 @@ builder.Services.AddDbContext<CodeRacerDbContext>(options =>
 // Register repositories (scoped: new instance per HTTP request)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRaceResultRepository, RaceResultRepository>();
-builder.Services.AddScoped<ISnippetRecordRepository, SnippetRecordRepository>();
+builder.Services.AddScoped<ICodeSnippetRepository, CodeSnippetRepository>();
+builder.Services.AddScoped<ICodeSnippetProvider>(sp => sp.GetRequiredService<ICodeSnippetRepository>());
 
 // Register services (scoped: new instance per HTTP request)
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
@@ -31,6 +32,9 @@ builder.Services.AddSingleton<ILeaderboardCache, LeaderboardCache>(); // shared 
 
 // The system clock; tests replace it with a fixed point in time.
 builder.Services.AddSingleton(TimeProvider.System);
+
+// Source of randomness for picking a random snippet; tests can replace it with a seeded one.
+builder.Services.AddSingleton(Random.Shared);
 
 // JWT settings: bound once, validated at startup, used both to issue and to validate tokens.
 builder.Services.AddOptions<JwtOptions>()
@@ -48,9 +52,8 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddSingleton<FileSnippetProvider>();
-builder.Services.AddSingleton<ICodeSnippetRepository>(sp => sp.GetRequiredService<FileSnippetProvider>());
-builder.Services.AddSingleton<ICodeSnippetProvider>(sp => sp.GetRequiredService<FileSnippetProvider>());
+builder.Services.AddScoped<ISnippetSeeder, JsonSnippetSeeder>();
+builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 builder.Services.AddSingleton<ISourceFileImporter, SourceFileImporter>();
 builder.Services.AddSingleton<ISourceSnippetExtractor, SourceSnippetExtractor>();
 
@@ -61,8 +64,8 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var provider = scope.ServiceProvider.GetRequiredService<ICodeSnippetProvider>();
-    provider.GetSnippets();
+    var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
+    await initializer.InitializeAsync(CancellationToken.None);
 }
 
 app.UseDefaultFiles();
