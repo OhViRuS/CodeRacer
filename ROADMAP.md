@@ -48,7 +48,7 @@ functionality to the requirements of each lab assignment.
 - [x] Entity Framework and relational database.
 - [x] Generic type and generic method.
 - [x] Custom exception.
-- [ ] `async`/`await` for I/O.
+- [x] `async`/`await` for I/O.
 - [ ] Shared memory/concurrency scenario.
 - [x] Dependency Injection.
 - [x] At least 50% unit/integration test coverage.

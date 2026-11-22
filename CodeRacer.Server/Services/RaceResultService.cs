@@ -7,21 +7,18 @@ namespace CodeRacer.Server.Services;
 /// <summary>
 /// Race result service implementation.
 /// Coordinates race result persistence and retrieval.
-/// Uses IRaceResultRepository for data access, and makes sure the raced snippet
-/// (loaded from snippets.json) also exists in the database before a result references it.
+/// Uses IRaceResultRepository for data access and checks that the raced snippet exists before saving a result.
 /// Results of players who are not signed in are saved under the shared <see cref="GuestAccount"/>.
 /// Every method checks the cancellation token first, so a cancelled request does no work.
 /// </summary>
 public class RaceResultService(
     IRaceResultRepository raceResultRepository,
     ICodeSnippetProvider snippetProvider,
-    ISnippetRecordRepository snippetRecordRepository,
     IUserRepository userRepository,
     TimeProvider timeProvider) : IRaceResultService
 {
     private readonly IRaceResultRepository _raceResultRepository = raceResultRepository;
     private readonly ICodeSnippetProvider _snippetProvider = snippetProvider;
-    private readonly ISnippetRecordRepository _snippetRecordRepository = snippetRecordRepository;
     private readonly IUserRepository _userRepository = userRepository;
     private readonly TimeProvider _timeProvider = timeProvider;
 
@@ -32,13 +29,11 @@ public class RaceResultService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var snippet = _snippetProvider.GetById(request.CodeSnippetId);
+        var snippet = await _snippetProvider.GetByIdAsync(request.CodeSnippetId, cancellationToken);
         if (snippet == null)
         {
             return null;
         }
-
-        await _snippetRecordRepository.EnsureExistsAsync(snippet, cancellationToken);
 
         if (userId == null)
         {

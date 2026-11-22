@@ -1,14 +1,18 @@
-using System;
-using System.Collections.Generic;
 using CodeRacer.Server.Models;
 
 namespace CodeRacer.Server.Interfaces;
 
+/// <summary>Read access to the code snippets stored in the database.</summary>
 public interface ICodeSnippetProvider
 {
-    IReadOnlyList<CodeSnippet> GetSnippets(ProgrammingLanguage? language = null);
+    Task<IReadOnlyList<CodeSnippet>> GetSnippetsAsync(
+        ProgrammingLanguage? language,
+        CancellationToken cancellationToken);
 
-    CodeSnippet? GetById(Guid id);
+    Task<CodeSnippet?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 
-    CodeSnippet? GetRandom(ProgrammingLanguage? language = null, Difficulty? difficulty = null);
+    Task<CodeSnippet?> GetRandomAsync(
+        ProgrammingLanguage? language,
+        Difficulty? difficulty,
+        CancellationToken cancellationToken);
 }

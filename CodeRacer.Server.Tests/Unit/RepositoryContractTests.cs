@@ -21,48 +21,6 @@ public class RepositoryContractTests
         return new CodeRacerDbContext(options);
     }
 
-    #region SnippetRecordRepository Contract Tests
-
-    private static CodeSnippet CreateSnippet() =>
-        new() { Id = Guid.NewGuid(), CodeText = "print(1)", Language = ProgrammingLanguage.Python, ProgrammingConcept = "Output" };
-
-    [Fact]
-    public async Task SnippetRecordRepository_EnsureExistsAsync_InsertsCopyWithoutTrackingIt()
-    {
-        // Arrange
-        var context = CreateTestDbContext();
-        var repository = new SnippetRecordRepository(context);
-        var snippet = CreateSnippet();
-
-        // Act
-        await repository.EnsureExistsAsync(snippet, CancellationToken.None);
-
-        // Assert
-        var stored = await context.CodeSnippets.AsNoTracking().SingleAsync();
-        Assert.Equal(snippet.Id, stored.Id);
-        Assert.Equal(snippet.CodeText, stored.CodeText);
-        Assert.Equal(snippet.Language, stored.Language);
-        Assert.Empty(context.ChangeTracker.Entries());
-    }
-
-    [Fact]
-    public async Task SnippetRecordRepository_EnsureExistsAsync_CalledTwice_InsertsOnce()
-    {
-        // Arrange
-        var context = CreateTestDbContext();
-        var repository = new SnippetRecordRepository(context);
-        var snippet = CreateSnippet();
-
-        // Act
-        await repository.EnsureExistsAsync(snippet, CancellationToken.None);
-        await repository.EnsureExistsAsync(snippet, CancellationToken.None);
-
-        // Assert
-        Assert.Equal(1, await context.CodeSnippets.CountAsync());
-    }
-
-    #endregion
-
     #region UserRepository Contract Tests
 
     [Fact]
