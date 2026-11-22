@@ -172,4 +172,43 @@ public class CodeSnippetRepositoryTests
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => repository.GetSnippetsAsync(null, cts.Token));
     }
+
+    [Fact]
+    public async Task UpdateSnippetAsync_CancelledToken_Throws()
+    {
+        var repository = CreateRepository(CreateContext());
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => repository.UpdateSnippetAsync(Guid.NewGuid(), Snippet("x"), cts.Token));
+    }
+
+    [Fact]
+    public async Task UpdateSnippetAsync_CodeOfAnotherSnippet_ThrowsDuplicateSnippetException()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        var first = Snippet("print(1)");
+        var second = Snippet("print(2)");
+        await repository.AddSnippetAsync(first, true, Cancellation);
+        await repository.AddSnippetAsync(second, true, Cancellation);
+        context.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<DuplicateSnippetException>(
+            () => repository.UpdateSnippetAsync(second.Id, Snippet("print(1)"), Cancellation));
+    }
+
+    [Fact]
+    public async Task UpdateSnippetAsync_KeepingItsOwnCode_Succeeds()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        var snippet = Snippet("print(1)");
+        await repository.AddSnippetAsync(snippet, true, Cancellation);
+        context.ChangeTracker.Clear();
+
+        Assert.True(await repository.UpdateSnippetAsync(
+            snippet.Id, Snippet("print(1)", difficulty: Difficulty.Hard), Cancellation));
+    }
 }

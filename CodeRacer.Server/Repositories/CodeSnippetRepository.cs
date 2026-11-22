@@ -47,16 +47,13 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
             candidates = candidates.Where(snippet => snippet.Difficulty == difficulty);
         }
 
-        int count = await candidates.CountAsync(cancellationToken);
-        if (count == 0)
-        {
-            return null;
-        }
-
-        return await candidates
+        // One query: the choice is made from the same rows that were read, so a concurrent insert or
+        // delete cannot make a separate count and the pick disagree.
+        List<CodeSnippet> matching = await candidates
             .OrderBy(snippet => snippet.Id)
-            .Skip(_random.Next(count))
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+
+        return matching.Count == 0 ? null : matching[_random.Next(matching.Count)];
     }
 
     public async Task AddSnippetAsync(CodeSnippet snippet, bool validateDuplicate, CancellationToken cancellationToken)
@@ -98,6 +95,7 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
     public async Task<bool> UpdateSnippetAsync(Guid id, CodeSnippet updatedSnippet, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(updatedSnippet);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var replacement = new CodeSnippet
         {
@@ -107,6 +105,11 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
             Difficulty = updatedSnippet.Difficulty,
             ProgrammingConcept = updatedSnippet.ProgrammingConcept
         };
+
+        if (await CodeExistsAsync(replacement.CodeText, excludedId: id, cancellationToken))
+        {
+            throw new DuplicateSnippetException();
+        }
 
         try
         {
