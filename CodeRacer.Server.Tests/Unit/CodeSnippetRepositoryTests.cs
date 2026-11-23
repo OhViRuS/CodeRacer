@@ -163,6 +163,41 @@ public class CodeSnippetRepositoryTests
     }
 
     [Fact]
+    public async Task GetTopicsAsync_TrimsWhitespaceAndMatchesUntrimmedTopics()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        context.CodeSnippets.Add(new CodeSnippet
+        {
+            Id = Guid.NewGuid(),
+            CodeText = "x = 1",
+            Language = ProgrammingLanguage.Python,
+            Difficulty = Difficulty.Easy,
+            ProgrammingConcept = "  Loops  "
+        });
+        await context.SaveChangesAsync();
+
+        var topics = await repository.GetTopicsAsync(null, Cancellation);
+        Assert.Equal(["Loops"], topics);
+
+        var filtered = await repository.GetSnippetsAsync(ProgrammingLanguage.Python, Difficulty.Easy, "Loops", Cancellation);
+        Assert.Single(filtered);
+    }
+
+    [Fact]
+    public async Task AddSnippetAsync_TrimsProgrammingConcept()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        var snippet = Snippet("print(1)", concept: "  Variables  ");
+
+        await repository.AddSnippetAsync(snippet, true, Cancellation);
+
+        var stored = await context.CodeSnippets.SingleAsync();
+        Assert.Equal("Variables", stored.ProgrammingConcept);
+    }
+
+    [Fact]
     public async Task UpdateSnippetAsync_ChangesStoredValues()
     {
         var context = CreateContext();

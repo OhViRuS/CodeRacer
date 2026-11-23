@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import LanguageSelector from './LanguageSelector';
 import DifficultySelector from './DifficultySelector';
 import TopicSelector from './TopicSelector';
@@ -10,13 +11,18 @@ function CodeSnippetDisplay({
     selectedDifficulty = null,
     onDifficultySelected,
     selectedTopic = null,
-    onTopicSelected
+    onTopicSelected,
+    onSnippetLoaded
 }) {
     const { snippet, error, loading, retry, startLoading } = useCodeSnippet(
         selectedLanguage,
         selectedDifficulty,
         selectedTopic
     );
+
+    useEffect(() => {
+        onSnippetLoaded?.(Boolean(snippet && !loading && !error));
+    }, [snippet, loading, error, onSnippetLoaded]);
 
     function handleLanguageChange(name) {
         if (name === selectedLanguage) {

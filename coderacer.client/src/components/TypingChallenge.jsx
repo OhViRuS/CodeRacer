@@ -68,7 +68,20 @@ function TypingChallenge({
     }
 
     if (error) {
-        return <p>{error}</p>;
+        return (
+            <div className="typing-challenge">
+                <p className="auth-error">{error}</p>
+                <div className="back-to-lobby">
+                    <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={onExit}
+                    >
+                        Back to Lobby
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     if (!snippet) {

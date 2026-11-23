@@ -75,7 +75,7 @@ public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceR
                 && (query.SnippetId == null || snippet.Id == query.SnippetId)
                 && snippet.Language == query.Language
                 && snippet.Difficulty == query.Difficulty
-                && (normalizedTopic == null || snippet.ProgrammingConcept.ToLower() == normalizedTopic)));
+                && (normalizedTopic == null || snippet.ProgrammingConcept.Trim().ToLower() == normalizedTopic)));
 
         var bestResults = query.SortBy switch
         {

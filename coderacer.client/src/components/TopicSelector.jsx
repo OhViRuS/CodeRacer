@@ -12,6 +12,7 @@ function TopicSelector({ selectedLanguage, selectedTopic, onTopicSelected }) {
             .then(data => {
                 if (!cancelled) {
                     setTopics(data);
+                    setError(null);
                 }
             })
             .catch(e => {

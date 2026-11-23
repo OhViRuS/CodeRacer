@@ -32,6 +32,7 @@ function Lobby({
 
     const [selectedDifficulty, setSelectedDifficulty] = useState(null);
     const [selectedTopic, setSelectedTopic] = useState(null);
+    const [hasSnippet, setHasSnippet] = useState(false);
 
     const [createLobbyModalOpen, setCreateLobbyModalOpen] = useState(false);
     const [joinLobbyModalOpen, setJoinLobbyModalOpen] = useState(false);
@@ -68,6 +69,7 @@ function Lobby({
                         onDifficultySelected={setSelectedDifficulty}
                         selectedTopic={selectedTopic}
                         onTopicSelected={setSelectedTopic}
+                        onSnippetLoaded={setHasSnippet}
                     />
 
                     <div className="lobby-actions">
@@ -81,7 +83,7 @@ function Lobby({
                         <button
                             className="primary-btn"
                             onClick={() => onStartGame(selectedLanguage, selectedDifficulty, selectedTopic)}
-                            disabled={!selectedLanguage}
+                            disabled={!selectedLanguage || !hasSnippet}
                         >
                             Start Game
                         </button>

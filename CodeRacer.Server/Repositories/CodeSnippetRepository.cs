@@ -76,7 +76,7 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
 
         return await Filter(language)
             .Where(snippet => !string.IsNullOrWhiteSpace(snippet.ProgrammingConcept))
-            .Select(snippet => snippet.ProgrammingConcept)
+            .Select(snippet => snippet.ProgrammingConcept.Trim())
             .Distinct()
             .OrderBy(topic => topic)
             .ToListAsync(cancellationToken);
@@ -88,6 +88,7 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
         cancellationToken.ThrowIfCancellationRequested();
 
         snippet.CodeText = snippet.CodeText.NormalizeSnippet();
+        snippet.ProgrammingConcept = snippet.ProgrammingConcept?.Trim() ?? string.Empty;
 
         if (validateDuplicate &&
             await DbSet.AsNoTracking().AnyAsync(existing => existing.CodeText == snippet.CodeText, cancellationToken))
@@ -129,7 +130,7 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
             CodeText = updatedSnippet.CodeText.NormalizeSnippet(),
             Language = updatedSnippet.Language,
             Difficulty = updatedSnippet.Difficulty,
-            ProgrammingConcept = updatedSnippet.ProgrammingConcept
+            ProgrammingConcept = updatedSnippet.ProgrammingConcept?.Trim() ?? string.Empty
         };
 
         if (await CodeExistsAsync(replacement.CodeText, excludedId: id, cancellationToken))
@@ -215,7 +216,7 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
         if (!string.IsNullOrWhiteSpace(topic))
         {
             var normalizedTopic = topic.Trim().ToLowerInvariant();
-            query = query.Where(snippet => snippet.ProgrammingConcept.ToLower() == normalizedTopic);
+            query = query.Where(snippet => snippet.ProgrammingConcept.Trim().ToLower() == normalizedTopic);
         }
 
         return query;

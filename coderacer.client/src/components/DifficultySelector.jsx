@@ -12,6 +12,7 @@ function DifficultySelector({ selectedDifficulty, onDifficultySelected }) {
             .then(data => {
                 if (!cancelled) {
                     setDifficulties(data);
+                    setError(null);
                 }
             })
             .catch(e => {
