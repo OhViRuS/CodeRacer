@@ -27,6 +27,7 @@ public class CodeSnippetsControllerIntegrationTests(CodeRacerWebApplicationFacto
         response.EnsureSuccessStatusCode();
         var snippets = await response.Content.ReadFromJsonAsync<List<CodeSnippet>>();
         Assert.NotNull(snippets);
+        Assert.NotEmpty(snippets);
         Assert.All(snippets, s =>
         {
             Assert.Equal(Difficulty.Easy, s.Difficulty);
