@@ -20,6 +20,7 @@ public class LeaderboardControllerIntegrationTests(CodeRacerWebApplicationFactor
 {
     private const ProgrammingLanguage SnippetLanguage = ProgrammingLanguage.Python;
     private const Difficulty SnippetDifficulty = Difficulty.Easy;
+    private static readonly DateTime TiedResultTime = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly CodeRacerWebApplicationFactory _factory = factory;
     private readonly HttpClient _client = factory.CreateClient();
@@ -107,10 +108,42 @@ public class LeaderboardControllerIntegrationTests(CodeRacerWebApplicationFactor
         Assert.Equal([winner, loser], entries.Select(entry => entry.UserId));
     }
 
+    [Theory]
+    [InlineData(LeaderboardSortBy.TypingSpeed)]
+    [InlineData(LeaderboardSortBy.Accuracy)]
+    [InlineData(LeaderboardSortBy.CompletionTime)]
+    public async Task Get_TiedOnAllScores_RanksTheEarlierResultFirst(LeaderboardSortBy sortBy)
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        // The later result is saved first and has the earlier name, so only CreatedAt can rank it second.
+        var later = await SaveTiedResultAsync($"a{suffix}", TiedResultTime.AddMinutes(1));
+        var earlier = await SaveTiedResultAsync($"z{suffix}", TiedResultTime);
+
+        var entries = await GetLeaderboardAsync(sortBy);
+
+        Assert.Equal([earlier, later], entries.Select(entry => entry.UserId));
+    }
+
+    [Theory]
+    [InlineData(LeaderboardSortBy.TypingSpeed)]
+    [InlineData(LeaderboardSortBy.Accuracy)]
+    [InlineData(LeaderboardSortBy.CompletionTime)]
+    public async Task Get_TiedOnAllScoresAndTime_RanksByUserName(LeaderboardSortBy sortBy)
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        // Saved in reverse order, so insertion order alone would rank them wrongly.
+        var lastByName = await SaveTiedResultAsync($"z{suffix}", TiedResultTime);
+        var firstByName = await SaveTiedResultAsync($"a{suffix}", TiedResultTime);
+
+        var entries = await GetLeaderboardAsync(sortBy);
+
+        Assert.Equal([firstByName, lastByName], entries.Select(entry => entry.UserId));
+    }
+
     [Fact]
     public async Task Get_WithoutTopicOrSnippetId_RanksResultsFromAllTopics()
     {
-        // No other test races on C++ Medium, so this shared, topic-less leaderboard holds only these results.
+        // This leaderboard has no topic, so it could hold other tests' results: only the relative order is checked.
         var firstSnippetId = Guid.NewGuid();
         var secondSnippetId = Guid.NewGuid();
         await CreateSnippetAsync(firstSnippetId, ProgrammingLanguage.Cpp, Difficulty.Medium, $"{_topic} first");
@@ -120,11 +153,12 @@ public class LeaderboardControllerIntegrationTests(CodeRacerWebApplicationFactor
 
         // The same query string the leaderboard UI sends with "All Topics" selected.
         var entries = await _client.GetFromJsonAsync<List<LeaderboardEntryDto>>(
-            "/api/leaderboard?sortBy=TypingSpeed&language=Cpp&difficulty=Medium&limit=10");
+            "/api/leaderboard?sortBy=TypingSpeed&language=Cpp&difficulty=Medium&limit=100");
 
         Assert.NotNull(entries);
-        Assert.Equal([faster, slower], entries.Select(entry => entry.UserId));
-        Assert.Equal([1, 2], entries.Select(entry => entry.Rank));
+        var fasterEntry = Assert.Single(entries, entry => entry.UserId == faster);
+        var slowerEntry = Assert.Single(entries, entry => entry.UserId == slower);
+        Assert.True(fasterEntry.Rank < slowerEntry.Rank);
     }
 
     [Fact]
@@ -282,6 +316,30 @@ public class LeaderboardControllerIntegrationTests(CodeRacerWebApplicationFactor
         var (client, userId) = await CreatePlayerAsync();
         await SaveResultAsync(client, typingSpeed, accuracy, seconds, snippetId);
         return userId;
+    }
+
+    /// <summary>
+    /// Saves directly to the database, because the API always sets CreatedAt to the current time.
+    /// </summary>
+    private async Task<Guid> SaveTiedResultAsync(string userName, DateTime createdAt)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<CodeRacerDbContext>();
+        var user = new User
+        {
+            UserName = userName,
+            Email = $"{userName}@example.com",
+            PasswordHash = "not-used"
+        };
+        context.Users.Add(user);
+        context.RaceResults.Add(new RaceResult(TimeSpan.FromSeconds(30), typingSpeed: 100, accuracy: 95)
+        {
+            UserId = user.Id,
+            CodeSnippetId = _snippetId,
+            CreatedAt = createdAt
+        });
+        await context.SaveChangesAsync();
+        return user.Id;
     }
 
     private async Task<(HttpClient Client, Guid UserId)> CreatePlayerAsync()
