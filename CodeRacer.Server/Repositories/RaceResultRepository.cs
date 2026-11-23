@@ -1,6 +1,7 @@
 using CodeRacer.Server.Data;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Models;
+using CodeRacer.Server.Strategies;
 using Microsoft.EntityFrameworkCore;
 
 namespace CodeRacer.Server.Repositories;
@@ -10,8 +11,13 @@ namespace CodeRacer.Server.Repositories;
 /// Provides race-result-specific queries for history, statistics, and leaderboards,
 /// built on the generic FindOrderedDescendingAsync from <see cref="Repository{T}"/>.
 /// </summary>
-public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceResult>(context), IRaceResultRepository
+public class RaceResultRepository(
+    CodeRacerDbContext context,
+    IEnumerable<ILeaderboardSortStrategy>? leaderboardSortStrategies = null) : Repository<RaceResult>(context), IRaceResultRepository
 {
+    private readonly IReadOnlyDictionary<LeaderboardSortBy, ILeaderboardSortStrategy> _leaderboardSortStrategies =
+        (leaderboardSortStrategies ?? DefaultLeaderboardSortStrategies()).ToDictionary(strategy => strategy.SortBy);
+
     public Task<IReadOnlyList<RaceResult>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken) =>
         FindOrderedDescendingAsync(
             r => r.UserId == userId,
@@ -77,68 +83,47 @@ public class RaceResultRepository(CodeRacerDbContext context) : Repository<RaceR
                 && snippet.Difficulty == query.Difficulty
                 && (normalizedTopic == null || snippet.ProgrammingConcept.ToLower() == normalizedTopic)));
 
-        var bestResults = query.SortBy switch
-        {
-            LeaderboardSortBy.TypingSpeed => filteredResults.Where(result => !filteredResults.Any(other =>
-                other.UserId == result.UserId
-                && (other.TypingSpeed > result.TypingSpeed
-                    || other.TypingSpeed == result.TypingSpeed && other.CompletionTime < result.CompletionTime
-                    || other.TypingSpeed == result.TypingSpeed && other.CompletionTime == result.CompletionTime && other.Accuracy > result.Accuracy
-                    || other.TypingSpeed == result.TypingSpeed && other.CompletionTime == result.CompletionTime && other.Accuracy == result.Accuracy && other.CreatedAt < result.CreatedAt))),
-            LeaderboardSortBy.Accuracy => filteredResults.Where(result => !filteredResults.Any(other =>
-                other.UserId == result.UserId
-                && (other.Accuracy > result.Accuracy
-                    || other.Accuracy == result.Accuracy && other.TypingSpeed > result.TypingSpeed
-                    || other.Accuracy == result.Accuracy && other.TypingSpeed == result.TypingSpeed && other.CompletionTime < result.CompletionTime
-                    || other.Accuracy == result.Accuracy && other.TypingSpeed == result.TypingSpeed && other.CompletionTime == result.CompletionTime && other.CreatedAt < result.CreatedAt))),
-            LeaderboardSortBy.CompletionTime => filteredResults.Where(result => !filteredResults.Any(other =>
-                other.UserId == result.UserId
-                && (other.CompletionTime < result.CompletionTime
-                    || other.CompletionTime == result.CompletionTime && other.TypingSpeed > result.TypingSpeed
-                    || other.CompletionTime == result.CompletionTime && other.TypingSpeed == result.TypingSpeed && other.Accuracy > result.Accuracy
-                    || other.CompletionTime == result.CompletionTime && other.TypingSpeed == result.TypingSpeed && other.Accuracy == result.Accuracy && other.CreatedAt < result.CreatedAt))),
-            _ => throw new ArgumentOutOfRangeException(nameof(query.SortBy), query.SortBy, "Unsupported leaderboard sort order.")
-        };
+        var strategy = GetStrategy(query.SortBy);
+        var bestResults = strategy.SelectBest(filteredResults);
 
         var orderedResults =
             from race in bestResults
             join user in Context.Users.AsNoTracking() on race.UserId equals user.Id
-            select new { race, user.UserName };
+            select new LeaderboardCandidate(
+                race.UserId,
+                user.UserName,
+                race.Id,
+                race.TypingSpeed,
+                race.Accuracy,
+                race.CompletionTime,
+                race.Mistakes,
+                race.CreatedAt);
 
-        var orderedQuery = query.SortBy switch
-        {
-            LeaderboardSortBy.TypingSpeed => orderedResults
-                .OrderByDescending(result => result.race.TypingSpeed)
-                .ThenBy(result => result.race.CompletionTime)
-                .ThenByDescending(result => result.race.Accuracy)
-                .ThenBy(result => result.race.CreatedAt)
-                .ThenBy(result => result.UserName),
-            LeaderboardSortBy.Accuracy => orderedResults
-                .OrderByDescending(result => result.race.Accuracy)
-                .ThenByDescending(result => result.race.TypingSpeed)
-                .ThenBy(result => result.race.CompletionTime)
-                .ThenBy(result => result.race.CreatedAt)
-                .ThenBy(result => result.UserName),
-            LeaderboardSortBy.CompletionTime => orderedResults
-                .OrderBy(result => result.race.CompletionTime)
-                .ThenByDescending(result => result.race.TypingSpeed)
-                .ThenByDescending(result => result.race.Accuracy)
-                .ThenBy(result => result.race.CreatedAt)
-                .ThenBy(result => result.UserName),
-            _ => throw new ArgumentOutOfRangeException(nameof(query.SortBy), query.SortBy, "Unsupported leaderboard sort order.")
-        };
+        var orderedQuery = strategy.Order(orderedResults);
 
         return await orderedQuery
             .Take(query.Limit)
             .Select(result => new LeaderboardRow(
-                result.race.UserId,
+                result.UserId,
                 result.UserName,
-                result.race.Id,
-                result.race.TypingSpeed,
-                result.race.Accuracy,
-                result.race.CompletionTime,
-                result.race.Mistakes,
-                result.race.CreatedAt))
+                result.RaceResultId,
+                result.TypingSpeed,
+                result.Accuracy,
+                result.CompletionTime,
+                result.Mistakes,
+                result.CreatedAt))
             .ToListAsync(cancellationToken);
     }
+
+    private ILeaderboardSortStrategy GetStrategy(LeaderboardSortBy sortBy) =>
+        _leaderboardSortStrategies.TryGetValue(sortBy, out var strategy)
+            ? strategy
+            : throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "Unsupported leaderboard sort order.");
+
+    private static IEnumerable<ILeaderboardSortStrategy> DefaultLeaderboardSortStrategies() =>
+    [
+        new TypingSpeedLeaderboardSortStrategy(),
+        new AccuracyLeaderboardSortStrategy(),
+        new CompletionTimeLeaderboardSortStrategy()
+    ];
 }

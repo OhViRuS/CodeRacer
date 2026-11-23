@@ -127,5 +127,19 @@ public class LeaderboardRepositoryTests
         Assert.Equal(120, accuracyRow.TypingSpeed);
         Assert.Equal(95, accuracyRow.Accuracy);
         Assert.Equal(TimeSpan.FromSeconds(18), accuracyRow.CompletionTime);
+
+        var completionTimeResult = await repository.GetLeaderboardAsync(
+            new LeaderboardQuery(
+                SortBy: LeaderboardSortBy.CompletionTime,
+                Language: ProgrammingLanguage.CSharp,
+                Difficulty: Difficulty.Hard,
+                Topic: "Loops",
+                SnippetId: matchingSnippet.Id),
+            CancellationToken.None);
+
+        var completionTimeRow = Assert.Single(completionTimeResult);
+        Assert.Equal(130, completionTimeRow.TypingSpeed);
+        Assert.Equal(80, completionTimeRow.Accuracy);
+        Assert.Equal(TimeSpan.FromSeconds(16), completionTimeRow.CompletionTime);
     }
 }
