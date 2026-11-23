@@ -91,15 +91,17 @@ public class RaceResultRepository(
         var orderedResults =
             from race in bestResults
             join user in Context.Users.AsNoTracking() on race.UserId equals user.Id
-            select new LeaderboardCandidate(
-                race.UserId,
-                user.UserName,
-                race.Id,
-                race.TypingSpeed,
-                race.Accuracy,
-                race.CompletionTime,
-                race.Mistakes,
-                race.CreatedAt);
+            select new LeaderboardCandidate
+            {
+                UserId = race.UserId,
+                UserName = user.UserName,
+                RaceResultId = race.Id,
+                TypingSpeed = race.TypingSpeed,
+                Accuracy = race.Accuracy,
+                CompletionTime = race.CompletionTime,
+                Mistakes = race.Mistakes,
+                CreatedAt = race.CreatedAt
+            };
 
         var orderedQuery = strategy.Order(orderedResults);
 

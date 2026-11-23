@@ -20,11 +20,21 @@ try {
 		--results-directory TestResults
 	if ($LASTEXITCODE -ne 0) { throw "Tests or coverage threshold failed." }
 
-	$coverageFiles = Get-ChildItem TestResults -Recurse -Filter coverage.cobertura.xml |
-		ForEach-Object { $_.FullName }
+	$coverageFiles = @(Get-ChildItem TestResults -Recurse -Filter coverage.cobertura.xml |
+		ForEach-Object { $_.FullName })
 
 	if (-not $coverageFiles) {
 		throw "No coverage file was generated."
+	}
+
+	[xml]$coverageXml = Get-Content $coverageFiles[0]
+	$lineRate = [double]$coverageXml.coverage.'line-rate'
+	$lineCoveragePercent = $lineRate * 100
+	$minimumCoveragePercent = 50
+	Write-Host ("Line coverage: {0:N2}%" -f $lineCoveragePercent)
+
+	if ($lineCoveragePercent -lt $minimumCoveragePercent) {
+		throw ("Line coverage {0:N2}% is below the required {1}% minimum." -f $lineCoveragePercent, $minimumCoveragePercent)
 	}
 
 	dotnet tool run reportgenerator `
