@@ -8,9 +8,10 @@ namespace CodeRacer.Server.Tests.Integration;
 /// <summary>
 /// Integration tests for UsersController.
 /// Runs the real ASP.NET Core pipeline (routing, validation, JSON, DI, JWT) in memory
-/// with WebApplicationFactory, against an EF Core in-memory database.
+/// with WebApplicationFactory, against an isolated PostgreSQL Testcontainer.
 /// </summary>
-public class UsersControllerIntegrationTests : IClassFixture<CodeRacerWebApplicationFactory>
+[Collection(IntegrationTestCollection.Name)]
+public class UsersControllerIntegrationTests
 {
     private readonly HttpClient _client;
 

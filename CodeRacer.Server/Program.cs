@@ -3,6 +3,7 @@ using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Repositories;
 using CodeRacer.Server.Services;
 using CodeRacer.Server.Settings;
+using CodeRacer.Server.Strategies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -19,6 +20,9 @@ builder.Services.AddDbContext<CodeRacerDbContext>(options =>
 // Register repositories (scoped: new instance per HTTP request)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRaceResultRepository, RaceResultRepository>();
+builder.Services.AddScoped<ILeaderboardSortStrategy, TypingSpeedLeaderboardSortStrategy>();
+builder.Services.AddScoped<ILeaderboardSortStrategy, AccuracyLeaderboardSortStrategy>();
+builder.Services.AddScoped<ILeaderboardSortStrategy, CompletionTimeLeaderboardSortStrategy>();
 builder.Services.AddScoped<ICodeSnippetRepository, CodeSnippetRepository>();
 builder.Services.AddScoped<ICodeSnippetProvider>(sp => sp.GetRequiredService<ICodeSnippetRepository>());
 

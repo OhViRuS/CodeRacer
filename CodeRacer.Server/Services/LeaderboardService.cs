@@ -49,9 +49,8 @@ public class LeaderboardService(
         CancellationToken cancellationToken)
     {
         var rows = await _raceResultRepository.GetLeaderboardAsync(query, cancellationToken);
-        var orderedRows = OrderRows(rows, query.SortBy);
 
-        return orderedRows
+        return rows
             .Take(query.Limit)
             .Select((row, index) => new LeaderboardEntryDto(
                 Rank: index + 1,
@@ -68,29 +67,4 @@ public class LeaderboardService(
             // not even by casting it back to a List.
             .AsReadOnly();
     }
-
-    private static IEnumerable<LeaderboardRow> OrderRows(
-        IEnumerable<LeaderboardRow> rows,
-        LeaderboardSortBy sortBy) => sortBy switch
-        {
-            LeaderboardSortBy.TypingSpeed => rows
-                .OrderByDescending(row => row.TypingSpeed)
-                .ThenBy(row => row.CompletionTime)
-                .ThenByDescending(row => row.Accuracy)
-                .ThenBy(row => row.CreatedAt)
-                .ThenBy(row => row.UserName),
-            LeaderboardSortBy.Accuracy => rows
-                .OrderByDescending(row => row.Accuracy)
-                .ThenByDescending(row => row.TypingSpeed)
-                .ThenBy(row => row.CompletionTime)
-                .ThenBy(row => row.CreatedAt)
-                .ThenBy(row => row.UserName),
-            LeaderboardSortBy.CompletionTime => rows
-                .OrderBy(row => row.CompletionTime)
-                .ThenByDescending(row => row.TypingSpeed)
-                .ThenByDescending(row => row.Accuracy)
-                .ThenBy(row => row.CreatedAt)
-                .ThenBy(row => row.UserName),
-            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "Unsupported leaderboard sort order.")
-        };
 }
