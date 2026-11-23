@@ -16,7 +16,9 @@ public class RaceResultRepository(
     IEnumerable<ILeaderboardSortStrategy>? leaderboardSortStrategies = null) : Repository<RaceResult>(context), IRaceResultRepository
 {
     private readonly IReadOnlyDictionary<LeaderboardSortBy, ILeaderboardSortStrategy> _leaderboardSortStrategies =
-        (leaderboardSortStrategies ?? DefaultLeaderboardSortStrategies()).ToDictionary(strategy => strategy.SortBy);
+        (leaderboardSortStrategies?.Any() == true
+            ? leaderboardSortStrategies
+            : DefaultLeaderboardSortStrategies()).ToDictionary(strategy => strategy.SortBy);
 
     public Task<IReadOnlyList<RaceResult>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken) =>
         FindOrderedDescendingAsync(

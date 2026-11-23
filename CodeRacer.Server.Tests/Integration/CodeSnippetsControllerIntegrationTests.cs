@@ -5,8 +5,8 @@ using CodeRacer.Server.Models;
 namespace CodeRacer.Server.Tests.Integration;
 
 /// <summary>Snippets are served from the seeded database through the real pipeline.</summary>
+[Collection(IntegrationTestCollection.Name)]
 public class CodeSnippetsControllerIntegrationTests(CodeRacerWebApplicationFactory factory)
-    : IClassFixture<CodeRacerWebApplicationFactory>
 {
     private readonly HttpClient _client = factory.CreateClient();
 

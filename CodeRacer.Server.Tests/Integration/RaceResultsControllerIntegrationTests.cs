@@ -13,7 +13,8 @@ namespace CodeRacer.Server.Tests.Integration;
 /// Exercises the real ASP.NET Core pipeline including JWT authentication:
 /// each test registers a user and calls the API with that user's bearer token.
 /// </summary>
-public class RaceResultsControllerIntegrationTests : IClassFixture<CodeRacerWebApplicationFactory>
+[Collection(IntegrationTestCollection.Name)]
+public class RaceResultsControllerIntegrationTests
 {
     private readonly CodeRacerWebApplicationFactory _factory;
 

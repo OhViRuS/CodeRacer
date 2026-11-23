@@ -57,9 +57,16 @@ public class CodeRacerWebApplicationFactory : WebApplicationFactory<Program>, IA
 
     public async Task DisposeAsync()
     {
-        if (_postgres is not null)
+        try
         {
-            await _postgres.DisposeAsync();
+            if (_postgres is not null)
+            {
+                await _postgres.DisposeAsync();
+            }
+        }
+        finally
+        {
+            await base.DisposeAsync();
         }
     }
 
