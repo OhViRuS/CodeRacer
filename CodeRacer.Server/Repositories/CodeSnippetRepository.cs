@@ -16,13 +16,22 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
 {
     private readonly Random _random = random;
 
+    public Task<IReadOnlyList<CodeSnippet>> GetSnippetsAsync(
+        ProgrammingLanguage? language,
+        CancellationToken cancellationToken = default)
+    {
+        return GetSnippetsAsync(language, difficulty: null, topic: null, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<CodeSnippet>> GetSnippetsAsync(
         ProgrammingLanguage? language,
-        CancellationToken cancellationToken)
+        Difficulty? difficulty,
+        string? topic,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return await FilterByLanguage(language)
+        return await Filter(language, difficulty, topic)
             .OrderBy(snippet => snippet.Id)
             .ToListAsync(cancellationToken);
     }
@@ -34,26 +43,43 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
         return await DbSet.AsNoTracking().FirstOrDefaultAsync(snippet => snippet.Id == id, cancellationToken);
     }
 
+    public Task<CodeSnippet?> GetRandomAsync(
+        ProgrammingLanguage? language,
+        Difficulty? difficulty,
+        CancellationToken cancellationToken = default)
+    {
+        return GetRandomAsync(language, difficulty, topic: null, cancellationToken);
+    }
+
     public async Task<CodeSnippet?> GetRandomAsync(
         ProgrammingLanguage? language,
         Difficulty? difficulty,
-        CancellationToken cancellationToken)
+        string? topic,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        IQueryable<CodeSnippet> candidates = FilterByLanguage(language);
-        if (difficulty is not null)
-        {
-            candidates = candidates.Where(snippet => snippet.Difficulty == difficulty);
-        }
-
         // One query: the choice is made from the same rows that were read, so a concurrent insert or
         // delete cannot make a separate count and the pick disagree.
-        List<CodeSnippet> matching = await candidates
+        List<CodeSnippet> matching = await Filter(language, difficulty, topic)
             .OrderBy(snippet => snippet.Id)
             .ToListAsync(cancellationToken);
 
         return matching.Count == 0 ? null : matching[_random.Next(matching.Count)];
+    }
+
+    public async Task<IReadOnlyList<string>> GetTopicsAsync(
+        ProgrammingLanguage? language = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await Filter(language)
+            .Where(snippet => !string.IsNullOrWhiteSpace(snippet.ProgrammingConcept))
+            .Select(snippet => snippet.ProgrammingConcept.Trim())
+            .Distinct()
+            .OrderBy(topic => topic)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task AddSnippetAsync(CodeSnippet snippet, bool validateDuplicate, CancellationToken cancellationToken)
@@ -62,6 +88,7 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
         cancellationToken.ThrowIfCancellationRequested();
 
         snippet.CodeText = snippet.CodeText.NormalizeSnippet();
+        snippet.ProgrammingConcept = snippet.ProgrammingConcept?.Trim() ?? string.Empty;
 
         if (validateDuplicate &&
             await DbSet.AsNoTracking().AnyAsync(existing => existing.CodeText == snippet.CodeText, cancellationToken))
@@ -103,7 +130,7 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
             CodeText = updatedSnippet.CodeText.NormalizeSnippet(),
             Language = updatedSnippet.Language,
             Difficulty = updatedSnippet.Difficulty,
-            ProgrammingConcept = updatedSnippet.ProgrammingConcept
+            ProgrammingConcept = updatedSnippet.ProgrammingConcept?.Trim() ?? string.Empty
         };
 
         if (await CodeExistsAsync(replacement.CodeText, excludedId: id, cancellationToken))
@@ -169,9 +196,29 @@ public class CodeSnippetRepository(CodeRacerDbContext context, Random random)
             cancellationToken);
     }
 
-    private IQueryable<CodeSnippet> FilterByLanguage(ProgrammingLanguage? language)
+    private IQueryable<CodeSnippet> Filter(
+        ProgrammingLanguage? language,
+        Difficulty? difficulty = null,
+        string? topic = null)
     {
         IQueryable<CodeSnippet> query = DbSet.AsNoTracking();
-        return language is null ? query : query.Where(snippet => snippet.Language == language);
+
+        if (language is not null)
+        {
+            query = query.Where(snippet => snippet.Language == language);
+        }
+
+        if (difficulty is not null)
+        {
+            query = query.Where(snippet => snippet.Difficulty == difficulty);
+        }
+
+        if (!string.IsNullOrWhiteSpace(topic))
+        {
+            var normalizedTopic = topic.Trim().ToLowerInvariant();
+            query = query.Where(snippet => snippet.ProgrammingConcept.Trim().ToLower() == normalizedTopic);
+        }
+
+        return query;
     }
 }

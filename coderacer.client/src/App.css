@@ -196,6 +196,22 @@ th, td {
     min-height: 44px;
 }
 
+.filter-group {
+    margin-top: 16px;
+}
+
+.wrap-buttons {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.filter-error {
+    color: #f87171;
+    font-size: 14px;
+    margin: 4px 0;
+}
+
 .code-snippet-section.is-loading {
     opacity: 0.5;
     transition: opacity 0.15s ease;

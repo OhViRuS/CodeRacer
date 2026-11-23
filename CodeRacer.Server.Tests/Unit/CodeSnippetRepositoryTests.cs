@@ -22,8 +22,9 @@ public class CodeSnippetRepositoryTests
     private static CodeSnippet Snippet(
         string code,
         ProgrammingLanguage language = ProgrammingLanguage.Python,
-        Difficulty difficulty = Difficulty.Easy) =>
-        new() { CodeText = code, Language = language, Difficulty = difficulty, ProgrammingConcept = "Output" };
+        Difficulty difficulty = Difficulty.Easy,
+        string concept = "Output") =>
+        new() { CodeText = code, Language = language, Difficulty = difficulty, ProgrammingConcept = concept };
 
     [Fact]
     public async Task AddSnippetAsync_AssignsIdAndPersists()
@@ -105,6 +106,95 @@ public class CodeSnippetRepositoryTests
         await repository.AddSnippetAsync(Snippet("a"), true, Cancellation);
 
         Assert.Null(await repository.GetRandomAsync(ProgrammingLanguage.JavaScript, null, Cancellation));
+    }
+
+    [Fact]
+    public async Task GetSnippetsAsync_FiltersByDifficultyAndTopic()
+    {
+        var repository = CreateRepository(CreateContext());
+        await repository.AddSnippetAsync(Snippet("a", ProgrammingLanguage.Python, Difficulty.Easy, "Loops"), true, Cancellation);
+        await repository.AddSnippetAsync(Snippet("b", ProgrammingLanguage.Python, Difficulty.Hard, "Loops"), true, Cancellation);
+        await repository.AddSnippetAsync(Snippet("c", ProgrammingLanguage.Python, Difficulty.Easy, "Functions"), true, Cancellation);
+        await repository.AddSnippetAsync(Snippet("d", ProgrammingLanguage.JavaScript, Difficulty.Easy, "Loops"), true, Cancellation);
+
+        var easyLoops = await repository.GetSnippetsAsync(ProgrammingLanguage.Python, Difficulty.Easy, "loops", Cancellation);
+        var allLoops = await repository.GetSnippetsAsync(null, null, "Loops", Cancellation);
+        var hardSnippets = await repository.GetSnippetsAsync(null, Difficulty.Hard, null, Cancellation);
+
+        Assert.Single(easyLoops);
+        Assert.Equal("a", easyLoops[0].CodeText);
+        Assert.Equal(3, allLoops.Count);
+        Assert.Single(hardSnippets);
+        Assert.Equal("b", hardSnippets[0].CodeText);
+    }
+
+    [Fact]
+    public async Task GetRandomAsync_RespectsDifficultyAndTopic()
+    {
+        var repository = CreateRepository(CreateContext());
+        await repository.AddSnippetAsync(Snippet("a", ProgrammingLanguage.Python, Difficulty.Easy, "Loops"), true, Cancellation);
+        await repository.AddSnippetAsync(Snippet("b", ProgrammingLanguage.Python, Difficulty.Hard, "Loops"), true, Cancellation);
+        await repository.AddSnippetAsync(Snippet("c", ProgrammingLanguage.Python, Difficulty.Easy, "Functions"), true, Cancellation);
+
+        var picked = await repository.GetRandomAsync(ProgrammingLanguage.Python, Difficulty.Easy, "loops", Cancellation);
+        Assert.NotNull(picked);
+        Assert.Equal("a", picked.CodeText);
+
+        var none = await repository.GetRandomAsync(ProgrammingLanguage.Python, Difficulty.Hard, "Functions", Cancellation);
+        Assert.Null(none);
+    }
+
+    [Fact]
+    public async Task GetTopicsAsync_ReturnsDistinctSortedTopics_RespectsLanguage()
+    {
+        var repository = CreateRepository(CreateContext());
+        await repository.AddSnippetAsync(Snippet("a", ProgrammingLanguage.Python, Difficulty.Easy, "Variables"), true, Cancellation);
+        await repository.AddSnippetAsync(Snippet("b", ProgrammingLanguage.Python, Difficulty.Hard, "Loops"), true, Cancellation);
+        await repository.AddSnippetAsync(Snippet("c", ProgrammingLanguage.Python, Difficulty.Easy, "Loops"), true, Cancellation);
+        await repository.AddSnippetAsync(Snippet("d", ProgrammingLanguage.JavaScript, Difficulty.Easy, "Async"), true, Cancellation);
+
+        var allTopics = await repository.GetTopicsAsync(null, Cancellation);
+        var pythonTopics = await repository.GetTopicsAsync(ProgrammingLanguage.Python, Cancellation);
+        var jsTopics = await repository.GetTopicsAsync(ProgrammingLanguage.JavaScript, Cancellation);
+
+        Assert.Equal(["Async", "Loops", "Variables"], allTopics);
+        Assert.Equal(["Loops", "Variables"], pythonTopics);
+        Assert.Equal(["Async"], jsTopics);
+    }
+
+    [Fact]
+    public async Task GetTopicsAsync_TrimsWhitespaceAndMatchesUntrimmedTopics()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        context.CodeSnippets.Add(new CodeSnippet
+        {
+            Id = Guid.NewGuid(),
+            CodeText = "x = 1",
+            Language = ProgrammingLanguage.Python,
+            Difficulty = Difficulty.Easy,
+            ProgrammingConcept = "  Loops  "
+        });
+        await context.SaveChangesAsync();
+
+        var topics = await repository.GetTopicsAsync(null, Cancellation);
+        Assert.Equal(["Loops"], topics);
+
+        var filtered = await repository.GetSnippetsAsync(ProgrammingLanguage.Python, Difficulty.Easy, "Loops", Cancellation);
+        Assert.Single(filtered);
+    }
+
+    [Fact]
+    public async Task AddSnippetAsync_TrimsProgrammingConcept()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        var snippet = Snippet("print(1)", concept: "  Variables  ");
+
+        await repository.AddSnippetAsync(snippet, true, Cancellation);
+
+        var stored = await context.CodeSnippets.SingleAsync();
+        Assert.Equal("Variables", stored.ProgrammingConcept);
     }
 
     [Fact]

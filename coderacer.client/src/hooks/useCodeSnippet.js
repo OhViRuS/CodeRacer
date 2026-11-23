@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchCodeSnippet } from '../api/codeSnippetsApi';
 
-function useCodeSnippet(selectedLanguage) {
+function useCodeSnippet(selectedLanguage, selectedDifficulty = null, selectedTopic = null) {
     const [snippet, setSnippet] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(selectedLanguage !== null);
@@ -14,14 +14,16 @@ function useCodeSnippet(selectedLanguage) {
 
         let cancelled = false;
 
-        fetchCodeSnippet(selectedLanguage)
+        fetchCodeSnippet(selectedLanguage, selectedDifficulty, selectedTopic)
             .then(data => {
                 if (!cancelled) {
                     setSnippet(data);
+                    setError(null);
                 }
             })
             .catch(e => {
                 if (!cancelled) {
+                    setSnippet(null);
                     setError(e.message);
                 }
             })
@@ -34,7 +36,7 @@ function useCodeSnippet(selectedLanguage) {
         return () => {
             cancelled = true;
         };
-    }, [selectedLanguage, retryCount]);
+    }, [selectedLanguage, selectedDifficulty, selectedTopic, retryCount]);
 
     function startLoading() {
         setLoading(true);
