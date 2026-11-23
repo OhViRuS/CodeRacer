@@ -34,7 +34,7 @@ public class LeaderboardControllerIntegrationTests(CodeRacerWebApplicationFactor
 
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CodeRacerDbContext>();
-        var snippets = await context.CodeSnippets.Where(snippet => snippet.ProgrammingConcept == _topic).ToListAsync();
+        var snippets = await context.CodeSnippets.Where(snippet => snippet.ProgrammingConcept.StartsWith(_topic)).ToListAsync();
         var snippetIds = snippets.Select(snippet => snippet.Id).ToList();
         var results = await context.RaceResults.Where(result => snippetIds.Contains(result.CodeSnippetId)).ToListAsync();
         context.RaceResults.RemoveRange(results);
@@ -105,6 +105,26 @@ public class LeaderboardControllerIntegrationTests(CodeRacerWebApplicationFactor
         var entries = await GetLeaderboardAsync(sortBy);
 
         Assert.Equal([winner, loser], entries.Select(entry => entry.UserId));
+    }
+
+    [Fact]
+    public async Task Get_WithoutTopicOrSnippetId_RanksResultsFromAllTopics()
+    {
+        // No other test races on C++ Medium, so this shared, topic-less leaderboard holds only these results.
+        var firstSnippetId = Guid.NewGuid();
+        var secondSnippetId = Guid.NewGuid();
+        await CreateSnippetAsync(firstSnippetId, ProgrammingLanguage.Cpp, Difficulty.Medium, $"{_topic} first");
+        await CreateSnippetAsync(secondSnippetId, ProgrammingLanguage.Cpp, Difficulty.Medium, $"{_topic} second");
+        var slower = await SaveResultForNewPlayerAsync(typingSpeed: 90, accuracy: 95, seconds: 30, firstSnippetId);
+        var faster = await SaveResultForNewPlayerAsync(typingSpeed: 110, accuracy: 95, seconds: 25, secondSnippetId);
+
+        // The same query string the leaderboard UI sends with "All Topics" selected.
+        var entries = await _client.GetFromJsonAsync<List<LeaderboardEntryDto>>(
+            "/api/leaderboard?sortBy=TypingSpeed&language=Cpp&difficulty=Medium&limit=10");
+
+        Assert.NotNull(entries);
+        Assert.Equal([faster, slower], entries.Select(entry => entry.UserId));
+        Assert.Equal([1, 2], entries.Select(entry => entry.Rank));
     }
 
     [Fact]
@@ -234,7 +254,11 @@ public class LeaderboardControllerIntegrationTests(CodeRacerWebApplicationFactor
         return entries;
     }
 
-    private async Task CreateSnippetAsync(Guid snippetId)
+    private async Task CreateSnippetAsync(
+        Guid snippetId,
+        ProgrammingLanguage language = SnippetLanguage,
+        Difficulty difficulty = SnippetDifficulty,
+        string? topic = null)
     {
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CodeRacerDbContext>();
@@ -242,9 +266,9 @@ public class LeaderboardControllerIntegrationTests(CodeRacerWebApplicationFactor
         {
             Id = snippetId,
             CodeText = $"print('{snippetId}')",
-            Language = SnippetLanguage,
-            Difficulty = SnippetDifficulty,
-            ProgrammingConcept = _topic
+            Language = language,
+            Difficulty = difficulty,
+            ProgrammingConcept = topic ?? _topic
         });
         await context.SaveChangesAsync();
     }
