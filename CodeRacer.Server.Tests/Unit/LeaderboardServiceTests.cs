@@ -71,12 +71,12 @@ public class LeaderboardServiceTests
     }
 
     [Fact]
-    public async Task GetAsync_TypingSpeedSortReturnsRankedEntries()
+    public async Task GetAsync_PreservesRepositoryOrderingAndAssignsRanks()
     {
         var slower = CreateRow("slower", typingSpeed: 80, accuracy: 95, completionTime: 20);
         var faster = CreateRow("faster", typingSpeed: 120, accuracy: 90, completionTime: 15);
         _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
-            .Returns(new[] { slower, faster });
+            .Returns(new[] { faster, slower });
 
         var result = await _service.GetAsync(
             new LeaderboardQuery(
@@ -101,12 +101,12 @@ public class LeaderboardServiceTests
     }
 
     [Fact]
-    public async Task GetAsync_AccuracySortUsesSpeedAsTieBreaker()
+    public async Task GetAsync_PreservesRepositoryOrderingForAccuracy()
     {
         var slower = CreateRow("slower", typingSpeed: 80, accuracy: 95, completionTime: 20);
         var faster = CreateRow("faster", typingSpeed: 120, accuracy: 95, completionTime: 15);
         _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
-            .Returns(new[] { slower, faster });
+            .Returns(new[] { faster, slower });
 
         var result = await _service.GetAsync(
             new LeaderboardQuery(
@@ -119,12 +119,12 @@ public class LeaderboardServiceTests
     }
 
     [Fact]
-    public async Task GetAsync_CompletionTimeSortReturnsFastestEntriesFirst()
+    public async Task GetAsync_PreservesRepositoryOrderingForCompletionTime()
     {
         var slower = CreateRow("slower", typingSpeed: 120, accuracy: 95, completionTime: 20);
         var faster = CreateRow("faster", typingSpeed: 100, accuracy: 90, completionTime: 15);
         _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
-            .Returns(new[] { slower, faster });
+            .Returns(new[] { faster, slower });
 
         var result = await _service.GetAsync(
             new LeaderboardQuery(
@@ -138,12 +138,12 @@ public class LeaderboardServiceTests
     }
 
     [Fact]
-    public async Task GetAsync_EqualScoresPreferEarlierCreatedAtBeforeUserName()
+    public async Task GetAsync_PreservesRepositoryTieBreakOrdering()
     {
         var earlier = CreateRow("zebra", 100, 95, 15, DateTime.UtcNow.AddMinutes(-1));
         var later = CreateRow("alpha", 100, 95, 15, DateTime.UtcNow);
         _raceResultRepository.GetLeaderboardAsync(Arg.Any<LeaderboardQuery>(), Arg.Any<CancellationToken>())
-            .Returns(new[] { later, earlier });
+            .Returns(new[] { earlier, later });
 
         var result = await _service.GetAsync(
             new LeaderboardQuery(

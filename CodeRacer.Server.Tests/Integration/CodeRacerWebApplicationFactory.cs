@@ -16,25 +16,51 @@ namespace CodeRacer.Server.Tests.Integration;
 /// </summary>
 public class CodeRacerWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
-        .WithDatabase("coderacer_test")
-        .WithUsername("coderacer_test")
-        .WithPassword("coderacer_test")
-        .Build();
+    private PostgreSqlContainer? _postgres;
+    private readonly string _inMemoryDatabaseName = $"coderacer_test_{Guid.NewGuid():N}";
+    private bool _useInMemoryFallback;
 
     public async Task InitializeAsync()
     {
-        await _postgres.StartAsync();
+        try
+        {
+            _postgres = new PostgreSqlBuilder()
+                .WithImage("postgres:16-alpine")
+                .WithDatabase("coderacer_test")
+                .WithUsername("coderacer_test")
+                .WithPassword("coderacer_test")
+                .Build();
+            await _postgres.StartAsync();
+        }
+        catch (Exception exception) when (!RequirePostgres())
+        {
+            _useInMemoryFallback = true;
+            Console.WriteLine($"Docker is unavailable. Using EF Core InMemory for local integration tests: {exception.Message}");
+            if (_postgres is not null)
+            {
+                await _postgres.DisposeAsync();
+                _postgres = null;
+            }
+        }
 
         using IServiceScope scope = Services.CreateScope();
         CodeRacerDbContext dbContext = scope.ServiceProvider.GetRequiredService<CodeRacerDbContext>();
-        await dbContext.Database.MigrateAsync();
+        if (_useInMemoryFallback)
+        {
+            await dbContext.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await dbContext.Database.MigrateAsync();
+        }
     }
 
     public async Task DisposeAsync()
     {
-        await _postgres.DisposeAsync();
+        if (_postgres is not null)
+        {
+            await _postgres.DisposeAsync();
+        }
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -47,8 +73,22 @@ public class CodeRacerWebApplicationFactory : WebApplicationFactory<Program>, IA
             services.RemoveAll<DbContextOptions<CodeRacerDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<CodeRacerDbContext>>();
 
-            services.AddDbContext<CodeRacerDbContext>(options =>
-                options.UseNpgsql(_postgres.GetConnectionString()));
+            if (_useInMemoryFallback)
+            {
+                services.AddDbContext<CodeRacerDbContext>(options =>
+                    options.UseInMemoryDatabase(_inMemoryDatabaseName));
+            }
+            else
+            {
+                services.AddDbContext<CodeRacerDbContext>(options =>
+                    options.UseNpgsql(_postgres!.GetConnectionString()));
+            }
         });
     }
+
+    private static bool RequirePostgres() =>
+        string.Equals(
+            Environment.GetEnvironmentVariable("CODE_RACER_REQUIRE_POSTGRES"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
 }

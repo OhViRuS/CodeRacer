@@ -8,7 +8,9 @@ Remove-Item $testResults -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item $coverageReport -Recurse -Force -ErrorAction SilentlyContinue
 
 Push-Location $root
+$previousRequirePostgres = $env:CODE_RACER_REQUIRE_POSTGRES
 try {
+	$env:CODE_RACER_REQUIRE_POSTGRES = 'true'
 	dotnet tool restore
 	if ($LASTEXITCODE -ne 0) { throw "dotnet tool restore failed." }
 
@@ -34,5 +36,6 @@ try {
 	Write-Host "Coverage report: $(Join-Path $coverageReport 'index.html')"
 }
 finally {
+	$env:CODE_RACER_REQUIRE_POSTGRES = $previousRequirePostgres
 	Pop-Location
 }
