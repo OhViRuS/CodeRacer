@@ -37,6 +37,8 @@ function LeaderboardPanel() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const [refreshKey, setRefreshKey] = useState(0);
+
     // Load available languages and difficulties once
     useEffect(() => {
         let cancelled = false;
@@ -78,9 +80,15 @@ function LeaderboardPanel() {
         };
     }, [language]);
 
-    // Fetch leaderboard entries whenever filters change
+    // Fetch leaderboard entries whenever filters change or refreshed
     useEffect(() => {
         let cancelled = false;
+        queueMicrotask(() => {
+            if (!cancelled) {
+                setLoading(true);
+                setError(null);
+            }
+        });
 
         fetchLeaderboard({
             sortBy,
@@ -108,7 +116,16 @@ function LeaderboardPanel() {
         return () => {
             cancelled = true;
         };
-    }, [sortBy, language, difficulty, topic]);
+    }, [sortBy, language, difficulty, topic, refreshKey]);
+
+    function handleSortChange(newSort) {
+        if (newSort === sortBy) {
+            return;
+        }
+        setSortBy(newSort);
+        setLoading(true);
+        setError(null);
+    }
 
     function handleLanguageChange(newLang) {
         if (newLang === language) {
@@ -116,11 +133,51 @@ function LeaderboardPanel() {
         }
         setLanguage(newLang);
         setTopic(null); // Reset topic filter when language changes
+        setLoading(true);
+        setError(null);
+    }
+
+    function handleDifficultyChange(newDiff) {
+        if (newDiff === difficulty) {
+            return;
+        }
+        setDifficulty(newDiff);
+        setLoading(true);
+        setError(null);
+    }
+
+    function handleTopicChange(newTopic) {
+        if (newTopic === topic) {
+            return;
+        }
+        setTopic(newTopic);
+        setLoading(true);
+        setError(null);
+    }
+
+    function handleRefresh() {
+        setLoading(true);
+        setError(null);
+        setRefreshKey(k => k + 1);
     }
 
     return (
         <div className="leaderboard-panel">
-            <h2>Global Leaderboard</h2>
+            <div className="leaderboard-header">
+                <h2>Global Leaderboard</h2>
+                <button
+                    type="button"
+                    className="secondary-btn leaderboard-refresh-btn"
+                    onClick={handleRefresh}
+                    disabled={loading}
+                    aria-label="Refresh leaderboard"
+                >
+                    {loading ? 'Refreshing...' : 'Refresh'}
+                </button>
+            </div>
+            <p className="leaderboard-note">
+                Rankings update every 30 seconds. Use Refresh to check recent race results.
+            </p>
 
             <div className="leaderboard-filters">
                 <div className="leaderboard-filter-group">
@@ -131,7 +188,7 @@ function LeaderboardPanel() {
                                 key={opt.value}
                                 type="button"
                                 className={`leaderboard-btn ${sortBy === opt.value ? 'selected' : ''}`}
-                                onClick={() => setSortBy(opt.value)}
+                                onClick={() => handleSortChange(opt.value)}
                             >
                                 {opt.label}
                             </button>
@@ -163,7 +220,7 @@ function LeaderboardPanel() {
                                 key={diff}
                                 type="button"
                                 className={`leaderboard-btn ${difficulty === diff ? 'selected' : ''}`}
-                                onClick={() => setDifficulty(diff)}
+                                onClick={() => handleDifficultyChange(diff)}
                             >
                                 {diff}
                             </button>
@@ -178,7 +235,7 @@ function LeaderboardPanel() {
                             <button
                                 type="button"
                                 className={`leaderboard-btn ${topic === null ? 'selected' : ''}`}
-                                onClick={() => setTopic(null)}
+                                onClick={() => handleTopicChange(null)}
                             >
                                 All Topics
                             </button>
@@ -187,7 +244,7 @@ function LeaderboardPanel() {
                                     key={t}
                                     type="button"
                                     className={`leaderboard-btn ${topic === t ? 'selected' : ''}`}
-                                    onClick={() => setTopic(t)}
+                                    onClick={() => handleTopicChange(t)}
                                 >
                                     {t}
                                 </button>
