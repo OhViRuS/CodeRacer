@@ -133,6 +133,7 @@ function LeaderboardPanel() {
         }
         setLanguage(newLang);
         setTopic(null); // Reset topic filter when language changes
+        setAvailableTopics([]); // Clear stale topics while new ones load
         setLoading(true);
         setError(null);
     }
@@ -176,7 +177,7 @@ function LeaderboardPanel() {
                 </button>
             </div>
             <p className="leaderboard-note">
-                Rankings update every 30 seconds. Use Refresh to check recent race results.
+                New results can take up to 30 seconds to appear.
             </p>
 
             <div className="leaderboard-filters">
@@ -260,8 +261,7 @@ function LeaderboardPanel() {
 
             {!loading && !error && entries && entries.length === 0 && (
                 <div className="leaderboard-empty">
-                    <p>No race results yet for this combination.</p>
-                    <p>Complete a typing challenge to set the first record!</p>
+                    <p>No ranked results for these filters yet.</p>
                 </div>
             )}
 
