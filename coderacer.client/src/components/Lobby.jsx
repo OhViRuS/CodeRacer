@@ -8,6 +8,7 @@ import useLobby from '../hooks/useLobby';
 import useLanguage from '../hooks/useLanguage';
 import AuthPanel from './AuthPanel';
 import StatisticsSection from './StatisticsSection';
+import LeaderboardSection from './LeaderboardSection';
 
 function Lobby({
     onStartGame,
@@ -98,6 +99,8 @@ function Lobby({
 
                 {user && <StatisticsSection user={user} token={token} onSessionExpired={onSessionExpired} />}
 
+                <LeaderboardSection />
+
                 <SourceFileImport onStartChallenge={onStartImportedChallenge} />
             </>
         );
@@ -114,6 +117,8 @@ function Lobby({
             />
 
             {user && <StatisticsSection user={user} token={token} onSessionExpired={onSessionExpired} />}
+
+            <LeaderboardSection />
 
             <div className="button-container">
                 <button

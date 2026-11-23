@@ -41,7 +41,7 @@ functionality to the requirements of each lab assignment.
 - [X] Validate imported files.
 - [x] Extract suitable code snippets from imported files.
 - [x] Generate typing challenges from a user's own code.
-- [ ] Leaderboards.
+- [x] Leaderboards.
 
 ### Requirement Coverage
 
