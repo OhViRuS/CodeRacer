@@ -24,7 +24,12 @@ public class RaceHub(ILobbyManager lobbyManager, ICodeSnippetProvider snippetPro
     /// <summary>Creates a lobby with the caller as host and returns it.</summary>
     public async Task<LobbyRoomDto> CreateLobby(string? userName)
     {
-        var room = _lobbyManager.CreateLobby(Context.ConnectionId, NormalizeUserName(userName));
+        var normalizedUserName = NormalizeUserName(userName);
+
+        // Leave any previous lobby first so its remaining players and SignalR group are updated.
+        await HandleLeaveAsync(Context.ConnectionAborted);
+
+        var room = _lobbyManager.CreateLobby(Context.ConnectionId, normalizedUserName);
         await Groups.AddToGroupAsync(Context.ConnectionId, room.Id, Context.ConnectionAborted);
 
         return room.ToDto();
@@ -34,7 +39,13 @@ public class RaceHub(ILobbyManager lobbyManager, ICodeSnippetProvider snippetPro
     public async Task<LobbyRoomDto> JoinLobby(string? lobbyId, string? userName)
     {
         var normalizedLobbyId = NormalizeLobbyId(lobbyId);
-        var result = _lobbyManager.JoinLobby(normalizedLobbyId, Context.ConnectionId, NormalizeUserName(userName), out var room);
+        var normalizedUserName = NormalizeUserName(userName);
+        var result = _lobbyManager.JoinLobby(
+            normalizedLobbyId,
+            Context.ConnectionId,
+            normalizedUserName,
+            out var room,
+            out var leftPreviousLobby);
 
         if (result != JoinLobbyResult.Joined || room is null)
         {
@@ -44,6 +55,11 @@ public class RaceHub(ILobbyManager lobbyManager, ICodeSnippetProvider snippetPro
                 JoinLobbyResult.Full => $"This lobby is full (maximum {LobbyRoom.MaxPlayers} players).",
                 _ => $"Lobby '{normalizedLobbyId}' was not found."
             });
+        }
+
+        if (leftPreviousLobby is not null)
+        {
+            await NotifyLeaveAsync(leftPreviousLobby, Context.ConnectionAborted);
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, room.Id, Context.ConnectionAborted);
@@ -138,26 +154,30 @@ public class RaceHub(ILobbyManager lobbyManager, ICodeSnippetProvider snippetPro
     private async Task HandleLeaveAsync(CancellationToken cancellationToken)
     {
         var result = _lobbyManager.LeaveLobby(Context.ConnectionId);
-        if (result is null)
+        if (result is not null)
         {
-            return;
+            await NotifyLeaveAsync(result, cancellationToken);
         }
+    }
 
+    private async Task NotifyLeaveAsync(LeaveLobbyResult result, CancellationToken cancellationToken)
+    {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, result.Room.Id, cancellationToken);
 
-        if (result.RoomClosed)
+        if (result.RoomClosed || result.Room.IsClosed)
         {
             return;
         }
 
+        var lobby = result.Room.ToDto();
         await Clients.Group(result.Room.Id).SendAsync(
             RaceHubEvents.PlayerLeft,
-            new PlayerLeftDto(Context.ConnectionId, result.Player.UserName, result.Room.ToDto()),
+            new PlayerLeftDto(Context.ConnectionId, result.Player.UserName, lobby),
             cancellationToken);
 
         if (result.RaceFinished)
         {
-            await Clients.Group(result.Room.Id).SendAsync(RaceHubEvents.GameFinished, result.Room.ToDto(), cancellationToken);
+            await Clients.Group(result.Room.Id).SendAsync(RaceHubEvents.GameFinished, lobby, cancellationToken);
         }
     }
 

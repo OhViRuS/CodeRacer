@@ -198,6 +198,57 @@ public class RaceHubTests
         await _groups.Received(1).RemoveFromGroupAsync("guest-1", created.Id, Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task CreateLobby_WhileInExistingLobby_RemovesFromOldGroupAndNotifiesOldLobby()
+    {
+        using var hostHub = CreateHub("host-1");
+        var first = await hostHub.CreateLobby("Alice");
+        using var guestHub = CreateHub("guest-1");
+        await guestHub.JoinLobby(first.Id, "Bob");
+
+        var second = await guestHub.CreateLobby("Bob");
+
+        Assert.NotEqual(first.Id, second.Id);
+        await _groups.Received(1).RemoveFromGroupAsync("guest-1", first.Id, Arg.Any<CancellationToken>());
+        await _groupProxy.Received(1).SendCoreAsync(
+            RaceHubEvents.PlayerLeft,
+            Arg.Is<object?[]>(args => args.Length == 1 && args[0] is PlayerLeftDto && ((PlayerLeftDto)args[0]!).ConnectionId == "guest-1"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task JoinLobby_WhileInExistingLobby_RemovesFromOldGroupAndNotifiesOldLobby()
+    {
+        using var host1Hub = CreateHub("host-1");
+        var first = await host1Hub.CreateLobby("Alice");
+        using var host2Hub = CreateHub("host-2");
+        var second = await host2Hub.CreateLobby("Carol");
+        using var guestHub = CreateHub("guest-1");
+        await guestHub.JoinLobby(first.Id, "Bob");
+
+        await guestHub.JoinLobby(second.Id, "Bob");
+
+        await _groups.Received(1).RemoveFromGroupAsync("guest-1", first.Id, Arg.Any<CancellationToken>());
+        await _groupProxy.Received(1).SendCoreAsync(
+            RaceHubEvents.PlayerLeft,
+            Arg.Is<object?[]>(args => args.Length == 1 && args[0] is PlayerLeftDto && ((PlayerLeftDto)args[0]!).Lobby.Id == first.Id),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task JoinLobby_WhenTargetFails_DoesNotLeaveCurrentLobby()
+    {
+        using var hostHub = CreateHub("host-1");
+        var first = await hostHub.CreateLobby("Alice");
+        using var guestHub = CreateHub("guest-1");
+        await guestHub.JoinLobby(first.Id, "Bob");
+
+        await Assert.ThrowsAsync<HubException>(() => guestHub.JoinLobby("NOPE00", "Bob"));
+
+        await _groups.DidNotReceive().RemoveFromGroupAsync("guest-1", first.Id, Arg.Any<CancellationToken>());
+        Assert.Equal(2, _lobbyManager.GetLobby(first.Id)!.Players.Count);
+    }
+
     private RaceHub CreateHub(string connectionId)
     {
         var context = Substitute.For<HubCallerContext>();

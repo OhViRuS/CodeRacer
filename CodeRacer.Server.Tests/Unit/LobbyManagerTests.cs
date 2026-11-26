@@ -325,6 +325,49 @@ public class LobbyManagerTests
         Assert.Same(room, _lobbyManager.GetLobby(room.Id));
     }
 
+    [Fact]
+    public void JoinLobby_FailedJoin_KeepsCallerInCurrentLobby()
+    {
+        var current = _lobbyManager.CreateLobby("host", "Alice");
+        var racing = _lobbyManager.CreateLobby("other", "Bob");
+        _lobbyManager.StartRace(racing.Id, "other", CreateSnippet(), out _);
+
+        var wrongCodeResult = _lobbyManager.JoinLobby("NOPE00", "host", "Alice", out _, out var left1);
+        var racingResult = _lobbyManager.JoinLobby(racing.Id, "host", "Alice", out _, out var left2);
+
+        Assert.Equal(JoinLobbyResult.NotFound, wrongCodeResult);
+        Assert.Null(left1);
+        Assert.Equal(JoinLobbyResult.AlreadyStarted, racingResult);
+        Assert.Null(left2);
+        Assert.Same(current, _lobbyManager.GetLobbyByConnectionId("host"));
+        Assert.True(current.Players.ContainsKey("host"));
+    }
+
+    [Fact]
+    public void JoinLobby_FinishedLobby_AllowsNewPlayerForRematch()
+    {
+        var room = _lobbyManager.CreateLobby("host", "Alice");
+        _lobbyManager.StartRace(room.Id, "host", CreateSnippet(), out _);
+        _lobbyManager.UpdateProgress("host", 100, 90);
+        Assert.Equal(LobbyStatus.Finished, room.Status);
+
+        var result = _lobbyManager.JoinLobby(room.Id, "guest", "Bob", out var joined);
+
+        Assert.Equal(JoinLobbyResult.Joined, result);
+        Assert.Same(room, joined);
+        Assert.Equal(2, room.Players.Count);
+    }
+
+    [Fact]
+    public void LeaveLobby_AfterCloseLobby_ReturnsNull()
+    {
+        var room = _lobbyManager.CreateLobby("host", "Alice");
+        _lobbyManager.JoinLobby(room.Id, "guest", "Bob", out _);
+        _lobbyManager.CloseLobby(room.Id, "host");
+
+        Assert.Null(_lobbyManager.LeaveLobby("guest"));
+    }
+
     private static CodeSnippet CreateSnippet() => new()
     {
         Id = Guid.NewGuid(),

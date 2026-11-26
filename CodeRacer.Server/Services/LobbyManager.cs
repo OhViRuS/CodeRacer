@@ -61,10 +61,17 @@ public sealed class LobbyManager(TimeProvider timeProvider) : ILobbyManager
     public LobbyRoom? GetLobbyByConnectionId(string connectionId) =>
         _connectionToLobbyId.TryGetValue(connectionId, out var lobbyId) ? GetLobby(lobbyId) : null;
 
-    public JoinLobbyResult JoinLobby(string lobbyId, string connectionId, string userName, out LobbyRoom? room)
-    {
-        LeaveLobby(connectionId);
+    public JoinLobbyResult JoinLobby(string lobbyId, string connectionId, string userName, out LobbyRoom? room) =>
+        JoinLobby(lobbyId, connectionId, userName, out room, out _);
 
+    public JoinLobbyResult JoinLobby(
+        string lobbyId,
+        string connectionId,
+        string userName,
+        out LobbyRoom? room,
+        out LeaveLobbyResult? leftPreviousLobby)
+    {
+        leftPreviousLobby = null;
         room = GetLobby(lobbyId);
         if (room is null)
         {
@@ -79,10 +86,16 @@ public sealed class LobbyManager(TimeProvider timeProvider) : ILobbyManager
                 return JoinLobbyResult.NotFound;
             }
 
-            if (room.Status != LobbyStatus.Waiting)
+            if (room.Status == LobbyStatus.Racing)
             {
                 room = null;
                 return JoinLobbyResult.AlreadyStarted;
+            }
+
+            if (room.Players.ContainsKey(connectionId))
+            {
+                _connectionToLobbyId[connectionId] = room.Id;
+                return JoinLobbyResult.Joined;
             }
 
             if (room.Players.Count >= LobbyRoom.MaxPlayers)
@@ -92,9 +105,18 @@ public sealed class LobbyManager(TimeProvider timeProvider) : ILobbyManager
             }
 
             room.Players[connectionId] = CreatePlayer(room, connectionId, userName, isHost: false);
-            _connectionToLobbyId[connectionId] = room.Id;
-            return JoinLobbyResult.Joined;
         }
+
+        // Only leave the previous lobby after the new spot is reserved, and outside room.SyncRoot
+        // so two room locks are never nested.
+        if (_connectionToLobbyId.TryGetValue(connectionId, out var previousLobbyId)
+            && !string.Equals(previousLobbyId, room.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            leftPreviousLobby = RemoveFromLobby(previousLobbyId, connectionId);
+        }
+
+        _connectionToLobbyId[connectionId] = room.Id;
+        return JoinLobbyResult.Joined;
     }
 
     public StartRaceResult StartRace(string lobbyId, string hostConnectionId, CodeSnippet snippet, out LobbyRoom? room)
@@ -151,7 +173,8 @@ public sealed class LobbyManager(TimeProvider timeProvider) : ILobbyManager
 
         lock (room.SyncRoot)
         {
-            if (room.Status != LobbyStatus.Racing
+            if (room.IsClosed
+                || room.Status != LobbyStatus.Racing
                 || !room.Players.TryGetValue(connectionId, out var player)
                 || player.IsFinished)
             {
@@ -170,38 +193,10 @@ public sealed class LobbyManager(TimeProvider timeProvider) : ILobbyManager
         }
     }
 
-    public LeaveLobbyResult? LeaveLobby(string connectionId)
-    {
-        if (!_connectionToLobbyId.TryRemove(connectionId, out var lobbyId)
-            || !_lobbies.TryGetValue(lobbyId, out var room))
-        {
-            return null;
-        }
-
-        lock (room.SyncRoot)
-        {
-            if (!room.Players.Remove(connectionId, out var player))
-            {
-                return null;
-            }
-
-            if (room.Players.Count == 0)
-            {
-                room.IsClosed = true;
-                _lobbies.TryRemove(room.Id, out _);
-                return new LeaveLobbyResult(room, player, RoomClosed: true, RaceFinished: false);
-            }
-
-            if (room.HostConnectionId == connectionId)
-            {
-                var nextHost = room.Players.Values.MinBy(remaining => remaining.JoinOrder)!;
-                nextHost.IsHost = true;
-                room.HostConnectionId = nextHost.ConnectionId;
-            }
-
-            return new LeaveLobbyResult(room, player, RoomClosed: false, FinishRaceIfEveryoneFinished(room));
-        }
-    }
+    public LeaveLobbyResult? LeaveLobby(string connectionId) =>
+        _connectionToLobbyId.TryGetValue(connectionId, out var lobbyId)
+            ? RemoveFromLobby(lobbyId, connectionId)
+            : null;
 
     public IReadOnlyList<string>? CloseLobby(string lobbyId, string hostConnectionId)
     {
@@ -222,12 +217,49 @@ public sealed class LobbyManager(TimeProvider timeProvider) : ILobbyManager
             _lobbies.TryRemove(room.Id, out _);
 
             var connectionIds = room.Players.Keys.ToList();
+            room.Players.Clear();
+
             foreach (var connectionId in connectionIds)
             {
-                _connectionToLobbyId.TryRemove(connectionId, out _);
+                _connectionToLobbyId.TryRemove(KeyValuePair.Create(connectionId, room.Id));
             }
 
             return connectionIds;
+        }
+    }
+
+    private LeaveLobbyResult? RemoveFromLobby(string lobbyId, string connectionId)
+    {
+        if (!_lobbies.TryGetValue(lobbyId, out var room))
+        {
+            _connectionToLobbyId.TryRemove(KeyValuePair.Create(connectionId, lobbyId));
+            return null;
+        }
+
+        lock (room.SyncRoot)
+        {
+            if (room.IsClosed || !room.Players.Remove(connectionId, out var player))
+            {
+                return null;
+            }
+
+            _connectionToLobbyId.TryRemove(KeyValuePair.Create(connectionId, room.Id));
+
+            if (room.Players.Count == 0)
+            {
+                room.IsClosed = true;
+                _lobbies.TryRemove(room.Id, out _);
+                return new LeaveLobbyResult(room, player, RoomClosed: true, RaceFinished: false);
+            }
+
+            if (room.HostConnectionId == connectionId)
+            {
+                var nextHost = room.Players.Values.MinBy(remaining => remaining.JoinOrder)!;
+                nextHost.IsHost = true;
+                room.HostConnectionId = nextHost.ConnectionId;
+            }
+
+            return new LeaveLobbyResult(room, player, RoomClosed: false, FinishRaceIfEveryoneFinished(room));
         }
     }
 

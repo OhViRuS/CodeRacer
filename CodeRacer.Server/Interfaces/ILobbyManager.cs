@@ -17,8 +17,23 @@ public interface ILobbyManager
     /// <summary>Finds the lobby the given connection is in.</summary>
     LobbyRoom? GetLobbyByConnectionId(string connectionId);
 
-    /// <summary>Adds a player to a lobby that is waiting for players and not full.</summary>
+    /// <summary>
+    /// Adds a player to a lobby that is not currently racing and not full.
+    /// The caller leaves their previous lobby only when joining the new one succeeds.
+    /// </summary>
     JoinLobbyResult JoinLobby(string lobbyId, string connectionId, string userName, out LobbyRoom? room);
+
+    /// <summary>
+    /// Adds a player to a lobby that is not currently racing and not full.
+    /// The caller leaves their previous lobby only when joining the new one succeeds, returning
+    /// the departure details in <paramref name="leftPreviousLobby"/>.
+    /// </summary>
+    JoinLobbyResult JoinLobby(
+        string lobbyId,
+        string connectionId,
+        string userName,
+        out LobbyRoom? room,
+        out LeaveLobbyResult? leftPreviousLobby);
 
     /// <summary>Starts a race with <paramref name="snippet"/> for every player. Only the host can start it.</summary>
     StartRaceResult StartRace(string lobbyId, string hostConnectionId, CodeSnippet snippet, out LobbyRoom? room);
