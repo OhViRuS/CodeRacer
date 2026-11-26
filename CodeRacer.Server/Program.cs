@@ -1,4 +1,5 @@
 using CodeRacer.Server.Data;
+using CodeRacer.Server.Hubs;
 using CodeRacer.Server.Interfaces;
 using CodeRacer.Server.Repositories;
 using CodeRacer.Server.Services;
@@ -13,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<CodeRacerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("CodeRacer")));
@@ -33,6 +35,7 @@ builder.Services.AddScoped<IUserStatisticsService, UserStatisticsService>();
 builder.Services.AddScoped<IRaceResultService, RaceResultService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddSingleton<ILeaderboardCache, LeaderboardCache>(); // shared by all requests
+builder.Services.AddSingleton<ILobbyManager, LobbyManager>(); // shared active multiplayer lobbies
 
 // The system clock; tests replace it with a fixed point in time.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -92,6 +95,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<RaceHub>("/hubs/race");
 
 app.MapFallbackToFile("/index.html");
 
